@@ -1,0 +1,54 @@
+{
+  "_comment": "Pinned upstream inputs. tools/build.py downloads each file, checks its SHA-256 and caches it in vendor/cache. To move to a newer KOReader, change the koreader entry, rebuild and test on the device.",
+  "koreader": {
+    "version": "v2026.07.1",
+    "file": "koreader-linux-arm64-v2026.07.1.tar.xz",
+    "urls": [
+      "https://github.com/koreader/koreader/releases/download/v2026.07.1/koreader-linux-arm64-v2026.07.1.tar.xz"
+    ],
+    "sha256": "68b399a99a88bf3f036f5e8b67d043215a28e11d375cf0823900aef7b1523a0b"
+  },
+  "runtime": [
+    {
+      "file": "libc6_2.36-9+deb12u14_arm64.deb",
+      "urls": [
+        "https://deb.debian.org/debian/pool/main/g/glibc/libc6_2.36-9+deb12u14_arm64.deb",
+        "https://snapshot.debian.org/file/85af57bf1f9fa075163e51c99d9536154c21ab7e"
+      ],
+      "sha256": "01f4330719fd4f65580e16ea5a0527f372fca750e8f588d26deaf09f2d3b1cf4",
+      "extract": [
+        "lib/aarch64-linux-gnu/ld-linux-aarch64.so.1",
+        "lib/aarch64-linux-gnu/libc.so.6",
+        "lib/aarch64-linux-gnu/libm.so.6",
+        "lib/aarch64-linux-gnu/libdl.so.2",
+        "lib/aarch64-linux-gnu/libpthread.so.0",
+        "lib/aarch64-linux-gnu/librt.so.1",
+        "lib/aarch64-linux-gnu/libresolv.so.2",
+        "lib/aarch64-linux-gnu/libnss_dns.so.2",
+        "lib/aarch64-linux-gnu/libnss_files.so.2"
+      ]
+    },
+    {
+      "file": "libstdc++6_12.2.0-14+deb12u1_arm64.deb",
+      "urls": [
+        "https://deb.debian.org/debian/pool/main/g/gcc-12/libstdc++6_12.2.0-14+deb12u1_arm64.deb",
+        "https://snapshot.debian.org/file/d0ab5371c1259b637436b4e61381e47385386650"
+      ],
+      "sha256": "26e138c677a985775331373828a6c286c551ff397cb735d00e2383cb273d1cb2",
+      "extract": [
+        "usr/lib/aarch64-linux-gnu/libstdc++.so.6"
+      ]
+    },
+    {
+      "file": "libgcc-s1_12.2.0-14+deb12u1_arm64.deb",
+      "urls": [
+        "https://deb.debian.org/debian/pool/main/g/gcc-12/libgcc-s1_12.2.0-14+deb12u1_arm64.deb",
+        "https://snapshot.debian.org/file/6534755fbb89e7bd0ef86c53fce6f34b4f7bfbd4"
+      ],
+      "sha256": "576926b283613db80168ddf76380a3bd877602778cf0d226caa7bfbfa71eacf3",
+      "extract": [
+        "lib/aarch64-linux-gnu/libgcc_s.so.1"
+      ]
+    }
+  ]
+}

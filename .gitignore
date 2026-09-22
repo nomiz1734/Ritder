@@ -1,0 +1,7 @@
+/dist
+/vendor/cache
+__pycache__/
+*.pyc
+
+# Ghi chú làm việc, không thuộc mã nguồn.
+/notes/

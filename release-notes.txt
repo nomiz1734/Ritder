@@ -1,0 +1,3 @@
+• Bản đầu tiên của Ritder cho TrimUI Brick Pro, dựa trên KOReader v2026.07.1
+• Đọc PDF, CBZ, CBR, EPUB, DjVu, FB2, MOBI; điều khiển hoàn toàn bằng nút bấm
+• Tự kiểm tra và cài bản cập nhật qua mạng (MENU > Kiểm tra cập nhật)

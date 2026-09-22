@@ -1,0 +1,7 @@
+{
+  "label": "Ritder",
+  "icon": "icon.png",
+  "icontop": "icon.png",
+  "launch": "launch.sh",
+  "description": "Book reader (PDF, CBZ, EPUB)"
+}
