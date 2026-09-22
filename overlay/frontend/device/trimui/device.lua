@@ -59,15 +59,12 @@ function TrimUIBrickPro:init()
     if emulator then
         self.screen = require("device/trimui/emu_framebuffer"):new{ device = self, debug = logger.dbg }
     else
+        -- Double-buffered; converts to the panel's BGR order itself, so KOReader stays in RGB.
         self.screen = require("device/trimui/framebuffer"):new{ device = self, debug = logger.dbg }
-        -- ARGB8888 is stored B, G, R, A in memory: tell the image decoders.
-        if self.screen.fb_bpp == 32 and self.screen._vinfo.red.offset ~= 0 then
-            self.hasBGRFrameBuffer = yes
-        end
     end
     local size = self.screen:getRawSize()
     logger.info("Ritder: framebuffer", size.w, "x", size.h, "@", self.screen.fb_bpp, "bpp",
-        "BGR:", self.hasBGRFrameBuffer())
+        "swap R/B:", self.screen.swap_rb == true)
 
     self.powerd = require("device/trimui/powerd"):new{ device = self }
 

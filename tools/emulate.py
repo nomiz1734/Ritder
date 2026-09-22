@@ -37,6 +37,7 @@ SCRIPTS = os.path.join(ROOT, "tests", "screens")
 DISTRO = "RitderEmu"
 DISTRO_DIR = os.path.join(ROOT, "vendor", "wsl", "distro")
 TIMEOUT_S = 300
+WSL_USERDATA = "/tmp/ritder-emu-userdata"
 
 
 def wsl_path(path: str) -> str:
@@ -117,6 +118,13 @@ def make_books() -> None:
             comic_page(n).save(buf, "JPEG", quality=85)
             z.writestr(f"{n:03d}.jpg", buf.getvalue())
     make_epub(os.path.join(BOOKS, "Truyen ngan.epub"))
+    # A series of 8, like a manga split into volumes: two pages of list in the file browser.
+    series = os.path.join(BOOKS, "Conan")
+    os.makedirs(series)
+    for n, (a, b) in enumerate([(0, 28), (29, 57), (58, 85), (86, 114), (115, 143), (144, 171), (172, 200), (201, 229)]):
+        pages = [comic_page(n + k) for k in range(2)]
+        pages[0].save(os.path.join(series, f"Conan chap {a}-{b}.pdf"), save_all=True, append_images=pages[1:],
+                      resolution=100)
 
 
 def make_epub(path: str) -> None:
@@ -153,12 +161,15 @@ def make_epub(path: str) -> None:
 
 
 def run_script(name: str) -> int:
+    make_books()  # every script starts from the same books, without reading positions
     script = os.path.join(SCRIPTS, name + ".lua")
     out = os.path.join(SHOTS, name)
     if os.path.isdir(out):
         shutil.rmtree(out)
     os.makedirs(out)
-    userdata = os.path.join(EMU, "userdata")
+    # The settings seed is written here; the app's userdata lives inside WSL (/tmp), because
+    # SQLite (CoverBrowser's cache) gets I/O errors on Windows drives under WSL1.
+    userdata = os.path.join(EMU, "userdata-seed")
     if os.path.isdir(userdata):
         shutil.rmtree(userdata)
     os.makedirs(userdata)
@@ -175,12 +186,14 @@ def run_script(name: str) -> int:
         "RITDER_EMU_OUT": wsl_path(out),
         "RITDER_EMU_BOOKS": books,
         "RITDER_HOME_DIR": books,
-        "KO_HOME": wsl_path(userdata),
+        "KO_HOME": WSL_USERDATA,
         "LC_ALL": "C.UTF-8",
     }
     exports = " ".join(f"{k}='{v}'" for k, v in env.items())
     debug = " -d" if os.environ.get("RITDER_EMU_DEBUG") else ""
-    cmd = f"cd '{wsl_path(APP)}' && env {exports} ./luajit reader.lua{debug}"
+    cmd = (f"rm -rf {WSL_USERDATA} && mkdir -p {WSL_USERDATA} && "
+           f"cp '{wsl_path(userdata)}/settings.reader.lua' {WSL_USERDATA}/ && "
+           f"cd '{wsl_path(APP)}' && env {exports} ./luajit reader.lua{debug}")
     log_path = os.path.join(out, "run.log")
     print(f"== {name}")
     with open(log_path, "wb") as log:
@@ -205,7 +218,6 @@ def main() -> int:
         setup()
         return 0
     assemble()
-    make_books()
     names = args or sorted(os.path.splitext(p)[0] for p in os.listdir(SCRIPTS) if p.endswith(".lua"))
     failed = 0
     for name in names:

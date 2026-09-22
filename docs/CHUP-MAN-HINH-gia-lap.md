@@ -1,6 +1,6 @@
 # Chụp ảnh màn hình Ritder bằng chế độ giả lập trên PC
 
-*Viết ngày 22/09/2026, theo code bản 0.1.1. Code chính: `tools/emulate.py`, `overlay/frontend/device/trimui/emulator.lua`, `overlay/frontend/device/trimui/emu_framebuffer.lua`, `tests/screens/*.lua`.*
+*Viết ngày 22/09/2026, cập nhật 23/09/2026 theo code bản 0.1.2. Code chính: `tools/emulate.py`, `overlay/frontend/device/trimui/emulator.lua`, `overlay/frontend/device/trimui/emu_framebuffer.lua`, `tests/screens/*.lua`.*
 
 ## 1. Tóm tắt
 
@@ -18,10 +18,11 @@ Khác với Spoty (tự vẽ giao diện bằng Rust nên build được bản W
 
 | Trên máy | Trong giả lập |
 |---|---|
-| `/dev/fb0` (`device/trimui/framebuffer.lua`) | Blitbuffer 1024×768 trong RAM (`emu_framebuffer.lua`) |
+| KOReader vẽ vào bộ đệm RAM, mỗi lệnh refresh chép vùng của nó lên `/dev/fb0` (`device/trimui/framebuffer.lua`) | Y hệt, nhưng "tấm màn" là một blitbuffer 1024×768 trong RAM (`emu_framebuffer.lua`). **Ảnh chụp lấy từ tấm màn**, nên chỗ nào vẽ mà quên refresh sẽ lộ ra như trên máy |
 | Nút đọc từ `/dev/input/event*` | Kịch bản gửi **đúng các sự kiện evdev thô của Brick Pro** (D-pad là trục HAT, L2/R2 là trục analog), đi qua cùng hàm dịch của `input_evdev.lua` |
 | Thẻ nhớ, sách của bạn | `dist\emulator\Books`: PDF, CBZ, EPUB mẫu do script tạo |
-| `userdata/` giữ qua các lần mở | `dist\emulator\userdata` tạo mới mỗi lần, từ `package/stock/defaults` (như lần cài đầu) |
+| `userdata/` giữ qua các lần mở | `/tmp/ritder-emu-userdata` trong WSL, tạo mới mỗi kịch bản từ `package/stock/defaults` (như lần cài đầu). Nằm trong WSL vì SQLite lỗi I/O trên ổ Windows dưới WSL1 |
+| Vị trí đọc sách của bạn | Thư mục sách mẫu cũng tạo lại mỗi kịch bản, nên kịch bản trước không ảnh hưởng kịch bản sau |
 
 Mình dùng ảnh làm **bằng chứng** sau mỗi lần sửa giao diện: chạy, mở từng ảnh ra xem, sửa tới khi đúng mới phát hành.
 
@@ -59,8 +60,32 @@ Tên nút: `A B X Y L1 R1 L2 R2 START SELECT MENU UP DOWN LEFT RIGHT`.
 | `04_reader_pdf_cbz` | PDF lật bằng R1, CBZ lật bằng R2 (trục analog), Y về thư mục |
 | `05_ritder_dialogs` | Hướng dẫn nhanh, Giới thiệu (logo Ritder), Phiên bản, **kiểm tra cập nhật thật** qua GitHub |
 | `06_exit_menu` | Menu Thoát: "Khởi động lại Ritder" (chuỗi gốc có chữ KOReader) |
+| `07_focus_perf` | Mỗi lần di chuyển focus vẽ lại bao nhiêu (xem mục 4.1), không còn sót highlight cũ |
+| `08_series_list` | Thư mục 8 tập (2 trang danh sách): mở tập 3, đọc, quay lại, lên/xuống, lật trang danh sách; mỗi ảnh đúng **một** dòng sáng |
+| `09_night_mode` | Chế độ ban đêm: dòng/nút đang chọn có khung màu hổ phách, chữ vẫn đọc được |
+| `10_rotation` | Xoay dọc: vùng refresh đổi đúng sang tọa độ vật lý |
 
-## 5. Những gì giả lập đã bắt được (bản 0.1.1)
+### 4.1 Số liệu mỗi bước
+
+Sau mỗi bước bấm nút, log in thời gian KOReader vẽ lại và phần màn hình được refresh, ví dụ (bản 0.1.2):
+
+```
+EMU key DOWN      paint 0.0 ms, refreshed 31.4% of the screen   ← danh sách sách: chỉ 2 dòng
+EMU key DOWN      paint 0.0 ms, refreshed 16.7% of the screen   ← menu trên: chỉ 2 mục
+EMU key DOWN      paint 0.0 ms, refreshed  3.3% of the screen   ← hộp thoại: chỉ 2 nút
+```
+
+Trước 0.1.2 mỗi lần DOWN vẽ lại cả cửa sổ và refresh 100% màn hình. Thời gian đo trên PC nhanh hơn máy nhiều lần, chỉ để so tương đối.
+
+## 5. Những gì giả lập đã bắt được
+
+### Bản 0.1.2
+
+- **Nhấp nháy khi chuyển mục** (video trên máy thật): app vẽ thẳng vào `/dev/fb0`, cả màn hình bị xóa trắng rồi vẽ lại dần trong ~170 ms. Sửa bằng double buffering + chỉ vẽ lại 2 mục đổi focus.
+- Khi chỉ vẽ lại riêng một mục, "gạch chân trắng" vô hình của nó xóa mất một đoạn vạch chia bên dưới (và biểu tượng ngôi nhà xóa một đoạn vạch dưới tiêu đề). Chỉ thấy được vì ảnh chụp lấy từ tấm màn.
+- Chế độ ban đêm: kiểu tô "multiply" làm mất chữ của dòng đang chọn.
+
+### Bản 0.1.1
 
 - Menu không có mục nào được tô khi mở, phải bấm DOWN mới thấy (KOReader đặt focus lên hàng biểu tượng tab).
 - Muốn đổi tab phải bấm UP lên hàng biểu tượng trước.
@@ -70,6 +95,7 @@ Tên nút: `A B X Y L1 R1 L2 R2 START SELECT MENU UP DOWN LEFT RIGHT`.
 ## 6. Giới hạn
 
 - **Không thử được phần cứng**: `/dev/fb0`, mã nút thật, tốc độ A133p, glibc đi kèm trong `sys/` (bản x86_64 dùng glibc của WSL), Wi-Fi của máy. Những phần đó vẫn phải thử trên TrimUI.
+- **Màu BGR của Brick** không thấy được: tấm màn giả lập là RGB. Việc đổi R/B lúc chép lên màn được kiểm bằng unit test (`tests/lua/test_framebuffer.lua`).
 - Pin hiện 0% và không đổi (WSL không có pin).
 - Ảnh chụp ngay sau bước cuối; hiệu ứng động không có (KOReader cũng gần như không có).
 - Thời gian khởi động và vẽ trang trên PC nhanh hơn máy nhiều, không dùng để đo tốc độ.

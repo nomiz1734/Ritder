@@ -55,9 +55,31 @@ end
 --- Called from Device:setEventHandlers, i.e. while ui/uimanager is still loading: take it as an argument.
 function Emulator.run(script_path, out_dir, UIManager)
     local evdev = require("device/trimui/input_evdev")
+    local time = require("ui/time")
     local steps = dofile(script_path)
+
+    -- Per-step cost: time spent painting widgets, and screen area copied to the "panel".
+    local paint_ms = 0
+    local _repaint = UIManager._repaint
+    UIManager._repaint = function(um)
+        local t0 = time.now()
+        _repaint(um)
+        paint_ms = paint_ms + time.to_ms(time.now() - t0)
+    end
+    local function report(label)
+        local screen = require("device").screen
+        local px = screen.refreshed_pixels or 0
+        io.stdout:write(string.format("EMU %-24s paint %6.1f ms, refreshed %5.1f%% of the screen\n",
+            label, paint_ms, 100 * px / (screen:getWidth() * screen:getHeight())))
+        paint_ms = 0
+        screen.refreshed_pixels = 0
+    end
+
     local i = 0
+    local last_label
     local function nextStep()
+        if last_label then report(last_label) end
+        last_label = nil
         i = i + 1
         local step = steps[i]
         if not step then
@@ -68,6 +90,9 @@ function Emulator.run(script_path, out_dir, UIManager)
         end
         local op, arg = step[1], step[2]
         local delay = step[3] or Emulator.step_delay
+        if op == "key" or op == "keys" then
+            last_label = op .. " " .. arg
+        end
         local ok, err = pcall(function()
             if op == "key" then
                 evdev.inject(Emulator.eventsFor(arg))

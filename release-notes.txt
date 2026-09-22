@@ -1,7 +1,5 @@
-• Mục đang chọn trong menu, danh sách sách và hộp thoại được tô nền xanh, dễ nhìn trên màn hình LCD
-• Trong menu: LEFT/RIGHT để đổi tab, LEFT để quay lại menu cha; mở menu là chọn sẵn mục đầu tiên
-• Con trỏ chọn chữ khi đọc (UP/DOWN) có ô vàng và dấu thập màu cam, dễ thấy hơn
-• Đổi toàn bộ tên và logo KOReader thành Ritder: tiêu đề, Giới thiệu, Phiên bản, Báo lỗi, Hướng dẫn nhanh
-• Bỏ mục "Cài đặt màn hình E-ink" (không dùng cho màn LCD)
-• Icon trong menu Apps không còn bị tràn khung
-• Sửa lỗi Kiểm tra cập nhật luôn báo lỗi ở bản 0.1.0
+• Hết nhấp nháy khi di chuyển giữa các mục: màn hình chỉ hiện khung hình đã vẽ xong
+• Di chuyển nhanh hơn: chỉ vẽ lại 2 mục thay đổi thay vì cả màn hình
+• Sửa màu: mục đang chọn có nền xanh (bản trước hiện hồng cam), màu tô sách cũng đúng
+• Highlight gọn hơn: menu dùng nền bo góc nằm gọn giữa các vạch chia, bỏ gạch chân ngắn; danh sách có dải màu bên trái
+• Chế độ ban đêm: mục đang chọn có khung màu hổ phách, chữ vẫn rõ
