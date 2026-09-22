@@ -2,9 +2,11 @@
 
 App đọc sách cho **TrimUI Brick Pro**, dựa trên [KOReader](https://github.com/koreader/koreader). Ưu tiên đọc mượt PDF và truyện tranh CBZ/CBR trên màn hình LCD 1024×768, điều khiển hoàn toàn bằng nút bấm, tự cập nhật qua GitHub Releases.
 
-Phiên bản hiện tại: **0.1.0** (dựa trên KOReader v2026.07.1).
+Phiên bản hiện tại: **0.1.1** (dựa trên KOReader v2026.07.1).
 
-> **Chưa chạy thử trên máy thật.** Bản 0.1.0 được build và kiểm thử trên PC (unit test Lua cho OTA và bàn phím, kiểm tra ELF/glibc). Phần màn hình (`/dev/fb0`) và mã nút evdev dựa trên thông số của firmware TG5040. Xem mục [Cần kiểm tra trên máy](#cần-kiểm-tra-trên-máy).
+> Đã chạy trên Brick Pro thật (firmware gốc): màn hình, nút bấm, pin, tiếng Việt. Giao diện được kiểm tra thêm bằng giả lập trên PC: [docs/CHUP-MAN-HINH-gia-lap.md](docs/CHUP-MAN-HINH-gia-lap.md).
+>
+> **Đang dùng 0.1.0?** "Kiểm tra cập nhật" của 0.1.0 bị lỗi, nên hãy cài 0.1.1 bằng tay một lần (giải nén `Ritder-stock.zip`, chép đè vào `Apps/Ritder`, không xóa `userdata/`). Từ 0.1.1 trở đi cập nhật qua MENU.
 
 ## Cài đặt
 
@@ -29,6 +31,8 @@ Cập nhật về sau: **MENU → Kiểm tra cập nhật**. Cài đặt, lịch
 | START / SELECT | Menu chính | Menu chính |
 | MENU, âm lượng, nguồn | Để Stock OS xử lý (độ sáng, âm lượng, ngủ) | |
 
+Trong menu chính: ↑ ↓ chọn mục, ← → đổi tab, A mở, ← hoặc B quay lại menu cha. Mục đang chọn luôn có nền xanh.
+
 Giữ D-pad hoặc nút vai để lặp. Đổi cách gán nút: tạo `userdata/settings/event_map.lua` (cùng dạng với `overlay/frontend/device/trimui/event_map.lua`).
 
 ## Kiến trúc
@@ -40,12 +44,18 @@ upstream.json                KOReader linux-arm64 (bản build chính thức) + 
 overlay/                     chép đè lên cây KOReader:
   frontend/device/trimui/    thiết bị Brick Pro: framebuffer, input evdev, pin, bảng phím
   frontend/ritder/update.lua lõi OTA (không có giao diện, chạy được trong tiến trình con)
+  frontend/ritder/brand.lua  đổi mọi chuỗi "KOReader" thành "Ritder" (qua gettext)
+  frontend/ritder/ui_theme.lua  nền xanh cho mục đang chọn, ← → đổi tab, con trỏ chọn chữ dễ thấy
+  resources/koreader.{png,svg}  logo Ritder thay logo KOReader
   plugins/ritderupdate.koplugin  giao diện OTA (MENU, hộp thoại, tiến trình tải)
 package/stock/               launch.sh, config.json, icon, cài đặt lần đầu
 tools/build.py               ghép dist/Ritder: tải + kiểm SHA-256 + chồng overlay + vá 3 chỗ
 tools/make_update.py         gói OTA + update.json
 tools/publish_release.py     tạo GitHub Release
-tests/                       unit test Lua (chạy bằng LuaJIT nhúng qua lupa)
+tools/emulate.py             chạy Ritder trên PC (WSL1) theo kịch bản, chụp PNG từng màn hình
+tools/make_icon.py           vẽ icon và logo
+tests/lua/                   unit test Lua (chạy bằng LuaJIT nhúng qua lupa)
+tests/screens/               kịch bản chụp màn hình cho tools/emulate.py
 docs/OTA-co-che-cap-nhat.md  toàn bộ cơ chế cập nhật
 ```
 
@@ -77,15 +87,23 @@ pip install lupa
 python tests\run_lua_tests.py
 ```
 
+Kiểm tra giao diện bằng ảnh chụp (xem [docs/CHUP-MAN-HINH-gia-lap.md](docs/CHUP-MAN-HINH-gia-lap.md)):
+
+```powershell
+python tools\emulate.py --setup   # một lần
+python tools\emulate.py           # ảnh trong dist\emulator\shots
+```
+
 Quy trình phát hành đầy đủ: [docs/OTA-co-che-cap-nhat.md](docs/OTA-co-che-cap-nhat.md), mục 5.
 
 ## Cần kiểm tra trên máy
 
 Các điểm dưới đây chưa xác nhận được nếu không có máy thật. Nếu có lỗi, `Apps/Ritder/userdata/crash.log` có đủ thông tin (độ phân giải framebuffer, các thiết bị input đã mở, mã phím).
 
-- [ ] `/dev/fb0` có hiển thị được không (độ phân giải, 32bpp, thứ tự màu BGR). Nếu màn hình là dọc tự nhiên (768×1024), xoay trong menu của KOReader.
-- [ ] Mã nút: A=305, B=304, X=308, Y=307, L1/R1=310/311, SELECT/START=314/315; D-pad là `ABS_HAT0X/Y`; L2/R2 là `ABS_Z/ABS_RZ`.
-- [ ] Thẻ nhớ cho chạy file (`launch.sh` ghi vào `userdata/launch.log` nếu không chạy được loader).
+- [x] `/dev/fb0` hiển thị đúng, màu đúng (0.1.0 trên máy thật).
+- [x] D-pad, A/B, START hoạt động (0.1.0 trên máy thật). Các nút còn lại: xem mã nút lạ trong `crash.log`.
+- [x] Thẻ nhớ cho chạy file.
+- [ ] Màu nền xanh của mục đang chọn trên màn thật (0.1.1).
 - [ ] Tốc độ mở PDF/CBZ nặng; có thể tăng `MUPDF_STORE_MB` trong `device.lua` hoặc `DHINTCOUNT`.
 - [ ] Wi-Fi và đồng hồ đúng giờ để OTA kiểm tra được chứng chỉ HTTPS.
 

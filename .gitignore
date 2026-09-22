@@ -1,5 +1,6 @@
 /dist
 /vendor/cache
+/vendor/wsl
 __pycache__/
 *.pyc
 

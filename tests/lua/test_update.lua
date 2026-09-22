@@ -195,13 +195,86 @@ end
 
 function tests.check_offers_only_newer_versions()
     local current = Update.currentVersion()
-    eq(current, "0.1.0", "build_info version")
-    withResponse('{"version":"0.1.0","file":"x.tar.gz","sha256":"' .. SHA .. '"}', function()
+    local parts = Update.parseVersion(current)
+    local newer = string.format("%d.%d.%d", parts[1] or 0, parts[2] or 0, (parts[3] or 0) + 1)
+    withResponse('{"version":"' .. current .. '","file":"x.tar.gz","sha256":"' .. SHA .. '"}', function()
         eq(Update.check("https://example.com/update.json"), false)
     end)
-    withResponse('{"version":"0.1.1","file":"x.tar.gz","sha256":"' .. SHA .. '"}', function()
+    withResponse('{"version":"' .. newer .. '","file":"x.tar.gz","sha256":"' .. SHA .. '"}', function()
         local m = Update.check("https://example.com/update.json")
-        eq(m.version, "0.1.1")
+        eq(m.version, newer)
+    end)
+end
+
+-- The real httpGet against a fake ssl.https: redirects, sinks, HTTPS-only hops.
+local function withFakeHttps(responses, fn)
+    local requests = {}
+    local fake = {
+        request = function(reqt)
+            table.insert(requests, reqt)
+            local r = responses[reqt.url]
+            if not r then return nil, "no route to " .. reqt.url end
+            if r.body then
+                reqt.sink(r.body)
+                reqt.sink(nil)
+            end
+            return 1, r.code, r.headers or {}
+        end,
+    }
+    local saved = _G.package.loaded["ssl.https"]
+    _G.package.loaded["ssl.https"] = fake
+    local ok, err = pcall(fn, requests)
+    _G.package.loaded["ssl.https"] = saved
+    if not ok then error(err, 0) end
+end
+
+function tests.manifest_through_real_http_get_with_redirect()
+    local body = '{"version":"9.9.9","file":"ritder-update.tar.gz","sha256":"' .. SHA .. '"}'
+    withFakeHttps({
+        ["https://github.com/x/y/releases/latest/download/update.json"] =
+            { code = 302, headers = { location = "https://objects.example.com/update.json?sig=1" } },
+        ["https://objects.example.com/update.json?sig=1"] = { code = 200, body = body },
+    }, function(requests)
+        local m, err = Update.fetchManifest("https://github.com/x/y/releases/latest/download/update.json")
+        truthy(m, err)
+        eq(m.version, "9.9.9")
+        eq(m.package_url, "https://github.com/x/y/releases/latest/download/ritder-update.tar.gz")
+        eq(#requests, 2)
+        eq(requests[1].redirect, false, "redirects are followed by hand")
+    end)
+end
+
+function tests.redirect_to_plain_http_is_refused()
+    withFakeHttps({
+        ["https://example.com/update.json"] = { code = 302, headers = { location = "http://evil.example.com/update.json" } },
+    }, function()
+        local m, err = Update.fetchManifest("https://example.com/update.json")
+        falsy(m)
+        truthy(err:find("HTTPS", 1, true), err)
+    end)
+end
+
+function tests.download_writes_file_and_checks_sha256()
+    local _, work = sandbox{}
+    local content = "abc"
+    local good = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    withFakeHttps({ ["https://example.com/p.tar.gz"] = { code = 200, body = content } }, function()
+        local path, err = Update.download({ package_url = "https://example.com/p.tar.gz", sha256 = good, size = 3 })
+        truthy(path, err)
+        eq(util.readFile(path), content)
+        local bad
+        bad, err = Update.download({ package_url = "https://example.com/p.tar.gz", sha256 = SHA })
+        falsy(bad)
+        truthy(err:find("SHA-256", 1, true), err)
+        falsy(exists(work .. "/package.tar.gz"), "bad download removed")
+    end)
+end
+
+function tests.http_error_is_reported()
+    withFakeHttps({ ["https://example.com/update.json"] = { code = 504 } }, function()
+        local m, err = Update.fetchManifest("https://example.com/update.json")
+        falsy(m)
+        truthy(err:find("504", 1, true), err)
     end)
 end
 

@@ -50,5 +50,21 @@
         "lib/aarch64-linux-gnu/libgcc_s.so.1"
       ]
     }
-  ]
+  ],
+  "koreader_emulator": {
+    "_comment": "x86_64 build of the same KOReader version, only for tools/emulate.py (screenshots on the PC).",
+    "file": "koreader-linux-x86_64-v2026.07.1.tar.xz",
+    "urls": [
+      "https://github.com/koreader/koreader/releases/download/v2026.07.1/koreader-linux-x86_64-v2026.07.1.tar.xz"
+    ],
+    "sha256": "299aadb28147a25e9432ced1214ea444a4184393b5ae97cf42402c8a61b1a1b0"
+  },
+  "wsl_rootfs": {
+    "_comment": "Ubuntu base image for the WSL1 distro RitderEmu that runs the emulator (tools/emulate.py --setup).",
+    "file": "ubuntu-base-24.04.3-base-amd64.tar.gz",
+    "urls": [
+      "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz"
+    ],
+    "sha256": "6bc2cde3930ad088b3bb46fa45279e96d25bc3810f209850ecbe4722711874f9"
+  }
 }

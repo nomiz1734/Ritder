@@ -5,4 +5,8 @@ return {
     ["home_dir"] = "@HOME_DIR@",
     ["lastdir"] = "@HOME_DIR@",
     ["left_right_keys_turn_pages"] = true,
+    -- The Brick has a color LCD: skip KOReader's first-run notice about color rendering.
+    ["color_rendering"] = true,
+    -- Skip KOReader's quickstart document on first start (Ritder's guide is in the Help menu).
+    ["quickstart_shown_version"] = 9999999999,
 }

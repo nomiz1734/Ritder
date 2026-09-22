@@ -13,6 +13,7 @@ local ConfirmBox = require("ui/widget/confirmbox")
 local InfoMessage = require("ui/widget/infomessage")
 local Notification = require("ui/widget/notification")
 local ProgressDialog = require("progressdialog")
+local RitderInfo = require("ritderinfo")
 local UIManager = require("ui/uimanager")
 local Update = require("ritder/update")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
@@ -97,6 +98,11 @@ local RitderUpdate = WidgetContainer:extend{
 
 function RitderUpdate:init()
     state.instance = self
+    -- LCD focus highlight. Done here, not in the device init: the widgets need the device
+    -- module, and the file browser's list items come from CoverBrowser, loaded as a plugin too.
+    local Theme = require("ritder/ui_theme")
+    Theme.install()
+    Theme.installPlugins()
     self.ui.menu:registerToMainMenu(self)
     if not state.started then
         state.started = true
@@ -162,6 +168,7 @@ end
 -- Menu ---------------------------------------------------------------------
 
 function RitderUpdate:addToMainMenu(menu_items)
+    RitderInfo.addToMainMenu(menu_items)
     menu_items.ritder_update = {
         text_func = function()
             if state.installed then

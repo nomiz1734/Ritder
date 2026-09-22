@@ -236,6 +236,28 @@ end
 local ev_buf = ffi.new("struct input_event[64]")
 local ev_size = ffi.sizeof("struct input_event")
 
+-- Raw evdev events queued by the emulator (device/trimui/emulator.lua), read before the devices.
+input.injected = {}
+
+--- Queues raw events ({type, code, value}) as if a device had sent them.
+function input.inject(events)
+    for _, e in ipairs(events) do
+        table.insert(input.injected, e)
+    end
+end
+
+local fake_dev = { thresholds = { [ABS_Z] = 127.5, [ABS_RZ] = 127.5, [ABS_GAS] = 127.5, [ABS_BRAKE] = 127.5 }, triggers = {} }
+
+local function drainInjected(out)
+    local t = now()
+    local sec = math.floor(t)
+    local time = { tv_sec = sec, tv_usec = math.floor((t - sec) * 1e6) }
+    for _, e in ipairs(input.injected) do
+        translate(fake_dev, { type = e.type, code = e.code, value = e.value, time = time }, out)
+    end
+    input.injected = {}
+end
+
 --- Waits for input. Returns true + an array of events, or false + errno (C.ETIME on timeout).
 function input.waitForEvent(sec, usec)
     local deadline
@@ -243,6 +265,11 @@ function input.waitForEvent(sec, usec)
         deadline = now() + sec + (usec or 0) / 1e6
     end
     while true do
+        if input.injected[1] then
+            local out = {}
+            drainInjected(out)
+            if #out > 0 then return true, out end
+        end
         local paths, n = {}, 0
         for path in pairs(input.devices) do
             n = n + 1

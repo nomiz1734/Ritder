@@ -51,13 +51,19 @@ local TrimUIBrickPro = Generic:extend{
 }
 
 function TrimUIBrickPro:init()
-    self.screen = require("device/trimui/framebuffer"):new{
-        device = self,
-        debug = logger.dbg,
-    }
-    -- ARGB8888 is stored B, G, R, A in memory: tell the image decoders.
-    if self.screen.fb_bpp == 32 and self.screen._vinfo.red.offset ~= 0 then
-        self.hasBGRFrameBuffer = yes
+    -- Before anything builds a menu or a dialog.
+    require("ritder/brand").install()
+
+    -- RITDER_EMULATOR=1 (tools/emulate.py): same code, but an in-memory screen and scripted buttons.
+    local emulator = os.getenv("RITDER_EMULATOR") == "1"
+    if emulator then
+        self.screen = require("device/trimui/emu_framebuffer"):new{ device = self, debug = logger.dbg }
+    else
+        self.screen = require("device/trimui/framebuffer"):new{ device = self, debug = logger.dbg }
+        -- ARGB8888 is stored B, G, R, A in memory: tell the image decoders.
+        if self.screen.fb_bpp == 32 and self.screen._vinfo.red.offset ~= 0 then
+            self.hasBGRFrameBuffer = yes
+        end
     end
     local size = self.screen:getRawSize()
     logger.info("Ritder: framebuffer", size.w, "x", size.h, "@", self.screen.fb_bpp, "bpp",
@@ -72,8 +78,10 @@ function TrimUIBrickPro:init()
         event_map = dofile("frontend/device/trimui/event_map.lua"),
     }
     evdev.event_map = self.input.event_map
-    local opened = evdev.openAll(os.getenv("RITDER_INPUT_DIR") or "/dev/input")
-    logger.info("Ritder: opened", opened, "input devices")
+    if not emulator then
+        local opened = evdev.openAll(os.getenv("RITDER_INPUT_DIR") or "/dev/input")
+        logger.info("Ritder: opened", opened, "input devices")
+    end
 
     local ok, mupdf = pcall(require, "ffi/mupdf")
     if ok then
@@ -81,6 +89,14 @@ function TrimUIBrickPro:init()
     end
 
     Generic.init(self)
+end
+
+function TrimUIBrickPro:setEventHandlers(UIManager)
+    Generic.setEventHandlers(self, UIManager)
+    local script = os.getenv("RITDER_EMU_SCRIPT")
+    if os.getenv("RITDER_EMULATOR") == "1" and script then
+        require("device/trimui/emulator").run(script, os.getenv("RITDER_EMU_OUT") or ".", UIManager)
+    end
 end
 
 -- The stock OS handles the power button and sleep itself.

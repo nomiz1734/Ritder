@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+<rect width="300" height="300" rx="64" fill="#1c2c4a"/>
+<polygon points="150,92 54,78 54,208 150,222" fill="#f6f1e4"/>
+<line x1="132" y1="111" x2="72" y2="104" stroke="#a0aabe" stroke-width="5"/>
+<line x1="132" y1="133" x2="72" y2="126" stroke="#a0aabe" stroke-width="5"/>
+<line x1="132" y1="155" x2="72" y2="148" stroke="#a0aabe" stroke-width="5"/>
+<line x1="132" y1="177" x2="72" y2="170" stroke="#a0aabe" stroke-width="5"/>
+<line x1="132" y1="199" x2="72" y2="192" stroke="#a0aabe" stroke-width="5"/>
+<polygon points="150,92 246,78 246,208 150,222" fill="#f6f1e4"/>
+<line x1="168" y1="111" x2="228" y2="104" stroke="#a0aabe" stroke-width="5"/>
+<line x1="168" y1="133" x2="228" y2="126" stroke="#a0aabe" stroke-width="5"/>
+<line x1="168" y1="155" x2="228" y2="148" stroke="#a0aabe" stroke-width="5"/>
+<line x1="168" y1="177" x2="228" y2="170" stroke="#a0aabe" stroke-width="5"/>
+<line x1="168" y1="199" x2="228" y2="192" stroke="#a0aabe" stroke-width="5"/>
+<line x1="150" y1="92" x2="150" y2="222" stroke="#1c2c4a" stroke-width="4"/>
+<polygon points="208,72 230,69 230,136 219,124 208,138" fill="#ec5c48"/>
+</svg>

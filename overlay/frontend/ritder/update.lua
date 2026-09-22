@@ -196,7 +196,7 @@ local function clockLooksWrong()
 end
 
 --- GET `url` over HTTPS, following at most MAX_REDIRECTS redirects, each of which must be HTTPS too.
--- `open_sink` is called once per hop and must return a fresh ltn12 sink (so a redirect body never
+-- `open_sink` is called once per hop and must return one fresh ltn12 sink (so a redirect body never
 -- ends up in the downloaded file). Returns true, or nil + a message for the user.
 function Update.httpGet(url, open_sink)
     local cafile = caFile()
@@ -206,7 +206,7 @@ function Update.httpGet(url, open_sink)
         end
         local https = require("ssl.https")
         https.TIMEOUT = Update.TIMEOUT
-        local sink, close_sink = open_sink()
+        local sink = open_sink()
         local ok, code, headers = https.request{
             url = url,
             method = "GET",
@@ -216,7 +216,6 @@ function Update.httpGet(url, open_sink)
             verify = cafile and "peer" or "none",
             cafile = cafile,
         }
-        if close_sink then close_sink() end
         if not ok then
             local err = tostring(code)
             if err:find("certificate") and clockLooksWrong() then
@@ -268,7 +267,8 @@ function Update.fetchManifest(url)
     local chunks
     local ok, err = Update.httpGet(url, function()
         chunks = {}
-        return ltn12.sink.table(chunks)
+        local sink = ltn12.sink.table(chunks) -- (also returns the table: keep only the sink)
+        return sink
     end)
     if not ok then return nil, err end
     local manifest = decodeJson(table.concat(chunks))
@@ -393,7 +393,8 @@ function Update.download(manifest)
     local ltn12 = require("ltn12")
     local ok, err = Update.httpGet(manifest.package_url, function()
         local file = io.open(path, "wb")
-        return ltn12.sink.file(file), nil -- ltn12.sink.file closes the file at the end
+        local sink = ltn12.sink.file(file) -- closes the file at the end
+        return sink
     end)
     if not ok then
         os.remove(path)
