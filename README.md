@@ -2,7 +2,7 @@
 
 App đọc sách cho **TrimUI Brick Pro**, dựa trên [KOReader](https://github.com/koreader/koreader). Ưu tiên đọc mượt PDF và truyện tranh CBZ/CBR trên màn hình LCD 1024×768, điều khiển hoàn toàn bằng nút bấm, tự cập nhật qua GitHub Releases.
 
-Phiên bản hiện tại: **0.1.4** (dựa trên KOReader v2026.07.1).
+Phiên bản hiện tại: **0.1.5** (dựa trên KOReader v2026.07.1).
 
 > Đã chạy trên Brick Pro thật (firmware gốc): màn hình, nút bấm, pin, tiếng Việt. Giao diện được kiểm tra thêm bằng giả lập trên PC: [docs/CHUP-MAN-HINH-gia-lap.md](docs/CHUP-MAN-HINH-gia-lap.md).
 >
@@ -34,6 +34,17 @@ Cập nhật về sau: **MENU → Kiểm tra cập nhật**. Cài đặt, lịch
 Trong menu chính: ↑ ↓ chọn mục, ← → đổi tab, A mở, ← hoặc B quay lại menu cha. Mục đang chọn luôn có nền xanh.
 
 Giữ D-pad hoặc nút vai để lặp. Đổi cách gán nút: tạo `userdata/settings/event_map.lua` (cùng dạng với `overlay/frontend/device/trimui/event_map.lua`).
+
+## Đọc ban đêm
+
+**START → Cài đặt (bánh răng) → Chế độ ban đêm** đảo màu toàn màn hình cho đỡ chói. Ngay dưới đó là **Giữ nguyên màu trang**:
+
+| | Trang sách | Menu, hộp thoại |
+|---|---|---|
+| Tắt (mặc định như KOReader) | bị đảo màu — truyện tranh đen trắng thành nền đen nét trắng | đảo màu |
+| Bật | giữ nguyên màu gốc | đảo màu |
+
+Bật mục này khi đọc truyện tranh hoặc sách nhiều hình. Nó áp dụng ngay cho sách đang mở, cho cả những sách mở sau đó, và đè lên lựa chọn cũ của từng cuốn — không phải chỉnh lại từng tập truyện. Mục này mờ đi khi chưa bật chế độ ban đêm.
 
 ## Khi có lỗi: gửi log
 
@@ -69,10 +80,11 @@ overlay/                     chép đè lên cây KOReader:
   frontend/ritder/brand.lua  đổi mọi chuỗi "KOReader" thành "Ritder" (qua gettext)
   frontend/ritder/ui_theme.lua  highlight mục đang chọn, chỉ vẽ lại 2 mục khi đổi focus, ← → đổi tab, con trỏ chọn chữ
   frontend/ritder/diagnostics.lua  thông tin máy ghi vào log, và gom log thành một file để gửi
+  frontend/ritder/night_pages.lua  "Giữ nguyên màu trang": ban đêm không đảo màu trang truyện
   resources/koreader.{png,svg}  logo Ritder thay logo KOReader
   plugins/ritderupdate.koplugin  giao diện OTA (MENU, hộp thoại, tiến trình tải)
 package/stock/               launch.sh, install.sh (thay file khi cập nhật), logging.sh (lịch sử chạy), config.json, icon, cài đặt lần đầu
-tools/build.py               ghép dist/Ritder: tải + kiểm SHA-256 + chồng overlay + vá 3 chỗ
+tools/build.py               ghép dist/Ritder: tải + kiểm SHA-256 + chồng overlay + vá 5 chỗ
 tools/make_update.py         gói OTA + update.json
 tools/publish_release.py     tạo GitHub Release
 tools/emulate.py             chạy Ritder trên PC (WSL1) theo kịch bản, chụp PNG từng màn hình
@@ -93,7 +105,7 @@ Những quyết định chính, và lý do:
 - **MuPDF store 32 MB** (upstream 8 MB) để lật qua lật lại đỡ phải giải mã lại. Trang kế tiếp đã được KOReader dựng sẵn khi rảnh (hinting, `DHINTCOUNT = 1`), bộ nhớ đệm trang lấy 40% RAM trống.
 - **CBR chạy được**: MuPDF của KOReader được build kèm libarchive (có RAR), khác với giả định ban đầu trong ghi chú nghiên cứu.
 - **App không tự thay file của chính nó khi cập nhật.** Nó chỉ giải nén bản mới ra `userdata/update/staging/`; `install.sh` (do `launch.sh` gọi lúc app chưa chạy) mới đổi tên các file vào chỗ. Trên thẻ FAT/exFAT, thay một file đang chạy có thể treo vô hạn.
-- **Vá upstream tối thiểu, có kiểm tra**: chỉ 3 chỗ (chọn thiết bị qua `RITDER_DEVICE`, 2 mục menu). Build dừng nếu một chỗ vá không còn khớp khi nâng KOReader.
+- **Vá upstream tối thiểu, có kiểm tra**: chỉ 5 chỗ (chọn thiết bị qua `RITDER_DEVICE`, 2 mục menu × 2 bảng menu). Build dừng nếu một chỗ vá không còn khớp khi nâng KOReader.
 
 ## Build
 

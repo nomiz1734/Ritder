@@ -33,6 +33,11 @@ KHI ĐỌC
 • ↑ ↓: hiện con trỏ để chọn chữ, tra từ, mở liên kết (A chọn, B thoát).
 • START: menu đọc (mục lục, cỡ chữ, lề, xoay màn hình...).
 
+BAN ĐÊM
+• START → Cài đặt (bánh răng) → Chế độ ban đêm: đảo màu cho đỡ chói.
+• Ngay dưới đó là "Giữ nguyên màu trang": bật lên nếu bạn đọc truyện tranh
+  đen trắng, trang sách sẽ giữ nền trắng nét đen, chỉ menu bị đảo màu.
+
 ĐỘ SÁNG, ÂM LƯỢNG, NGỦ
 • Do Stock OS điều khiển như bình thường (nút MENU, âm lượng, nguồn).
 

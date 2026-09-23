@@ -120,6 +120,21 @@ def comic_page(n: int):
     return img
 
 
+def manga_page(n: int):
+    """Black-and-white line art: what night mode turns into white-on-black."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (900, 1350), (255, 255, 255))
+    d = ImageDraw.Draw(img)
+    panels = [(40, 40, 860, 520), (40, 560, 430, 1310), (470, 560, 860, 1310)]
+    for i, (x0, y0, x1, y1) in enumerate(panels):
+        d.rectangle((x0, y0, x1, y1), outline=(0, 0, 0), width=8)
+        for y in range(y0 + 200, y1 - 40, 26):  # screentone-ish hatching
+            d.line((x0 + 20, y, x1 - 20, y), fill=(0, 0, 0), width=2 + (i + n) % 3)
+        d.ellipse((x0 + 40, y0 + 40, x0 + 300, y0 + 170), fill=(255, 255, 255), outline=(0, 0, 0), width=5)
+        d.text((x0 + 70, y0 + 80), f"Trang {n}!", fill=(0, 0, 0), font=font(40))
+    return img
+
+
 def make_books() -> None:
     from PIL import Image
     Image.init()  # registers the JPEG/PDF writers
@@ -132,6 +147,11 @@ def make_books() -> None:
         for n in range(1, 6):
             buf = io.BytesIO()
             comic_page(n).save(buf, "JPEG", quality=85)
+            z.writestr(f"{n:03d}.jpg", buf.getvalue())
+    with zipfile.ZipFile(os.path.join(BOOKS, "Truyen tranh", "Manga den trang.cbz"), "w") as z:
+        for n in range(1, 6):
+            buf = io.BytesIO()
+            manga_page(n).save(buf, "JPEG", quality=85)
             z.writestr(f"{n:03d}.jpg", buf.getvalue())
     make_epub(os.path.join(BOOKS, "Truyen ngan.epub"))
     # A series of 8, like a manga split into volumes: two pages of list in the file browser.

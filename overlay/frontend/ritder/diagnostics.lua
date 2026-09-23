@@ -109,6 +109,8 @@ function Diagnostics.deviceReport()
             tostring(G_reader_settings:readSetting("language")),
             G_reader_settings:nilOrTrue("ritder_auto_update_check") and "bật" or "tắt")
         add("Địa chỉ cập nhật: %s", Update.manifestUrl() ~= "" and Update.manifestUrl() or "(tắt)")
+        add("Giữ nguyên màu trang ban đêm: %s",
+            require("ritder/night_pages").isKept() and "bật" or "tắt")
     end
     local ready, pending = Update.readyVersion(), Update.pendingVersion()
     if ready then add("Bản đã tải, chờ cài: %s", ready) end

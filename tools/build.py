@@ -66,6 +66,19 @@ PATCHES = [
         '        "ritder_update", -- Ritder OTA (plugins/ritderupdate.koplugin)\n',
         "after",
     ),
+    # Right under "Night mode" in both menus: the switch from ritder/night_pages.lua.
+    (
+        "frontend/ui/elements/filemanager_menu_order.lua",
+        '"night_mode",',
+        '        "ritder_night_pages",\n',
+        "after",
+    ),
+    (
+        "frontend/ui/elements/reader_menu_order.lua",
+        '"night_mode",',
+        '        "ritder_night_pages",\n',
+        "after",
+    ),
 ]
 
 

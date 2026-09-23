@@ -1,6 +1,4 @@
-• Thêm mục START → Giúp đỡ → Gom log để gửi: gộp mọi nhật ký thành một file ritder-log.txt để gửi khi báo lỗi
-• Log giờ được giữ qua các lần chạy: lịch sử mở/thoát app, log lần chạy trước, và ghi lại lúc app thoát bất thường
-• Mỗi lần mở app đều ghi cấu hình máy vào log: phiên bản, màn hình, nút bấm, dung lượng thẻ, RAM
-• Nếu lần chạy trước bị lỗi, app hỏi ngay có gom log không
-• Trong hộp thoại hỏi đáp, nút đồng ý được chọn sẵn: A là đồng ý, B là hủy (trước đây A lại bấm trúng nút hủy)
-• Thêm tùy chọn ghi log chi tiết khi cần tìm lỗi khó
+• Ban đêm đọc truyện tranh: thêm mục START → Cài đặt → "Giữ nguyên màu trang", ngay dưới Chế độ ban đêm
+• Bật lên thì trang truyện đen trắng giữ nền trắng nét đen, chỉ menu bị đảo màu
+• Áp dụng ngay cho sách đang mở và cho mọi sách mở sau đó, không phải chỉnh lại từng tập truyện
+• Trong menu, bật/tắt một ô chọn không còn làm con trỏ nhảy về đầu danh sách

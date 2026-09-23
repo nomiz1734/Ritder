@@ -66,6 +66,7 @@ Tên nút: `A B X Y L1 R1 L2 R2 START SELECT MENU UP DOWN LEFT RIGHT`.
 | `10_rotation` | Xoay dọc: vùng refresh đổi đúng sang tọa độ vật lý |
 | `11_ota_install` | Trọn vòng cập nhật: kiểm tra thật qua GitHub, giải nén gói vừa build, rồi `install.sh` thay file |
 | `12_logs` | Báo "lần chạy trước bị lỗi", gom log, và nội dung file `ritder-log.txt` |
+| `13_night_comic` | Truyện đen trắng lúc bật chế độ ban đêm: trang bị đảo màu, rồi "Giữ nguyên màu trang" trả lại nền trắng nét đen; bấm A trong menu không làm mất focus |
 
 ### 4.1 Số liệu mỗi bước
 

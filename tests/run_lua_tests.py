@@ -100,6 +100,9 @@ def main() -> int:
                 struct input_event { struct timeval time; uint16_t type; uint16_t code; int32_t value; };
             ]]
         end
+        -- KOReader is built against a LuaJIT with 5.2 compatibility on; lupa embeds one without.
+        table.pack = table.pack or function(...) return { n = select("#", ...), ... } end
+        table.unpack = table.unpack or unpack
         LOG = {}
         package.preload["logger"] = function()
             local function rec(...) table.insert(LOG, table.concat({...}, " ")) end

@@ -20,6 +20,11 @@ return {
         local f = io.open(path)
         local text = f and f:read("*a") or "(không có)"
         if f then f:close() end
-        io.stdout:write("EMU report:\n" .. text:sub(1, 1800) .. "\nEMU report end\n")
+        -- tools/emulate.py only echoes lines starting with "EMU ": prefix every one of them.
+        io.stdout:write("EMU report:\n")
+        for line in (text:sub(1, 1800) .. "\n"):gmatch("([^\n]*)\n") do
+            io.stdout:write("EMU   " .. line .. "\n")
+        end
+        io.stdout:write("EMU report end\n")
     end },
 }

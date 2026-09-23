@@ -285,9 +285,15 @@ local function patchTouchMenuKeys(TouchMenu)
     -- KOReader parks the focus on the tab icons after every page/tab/submenu change, so
     -- nothing looks selected until you press DOWN. Land on the first entry instead.
     local updateItems = TouchMenu.updateItems
-    function TouchMenu:updateItems(...)
-        updateItems(self, ...)
-        if self.layout and self.layout[2] and self.layout[2][self.cur_tab] then
+    function TouchMenu:updateItems(target_page, ...)
+        -- No target page means the list is being rebuilt in place, after ticking a checkbox:
+        -- stay on that entry instead of jumping back to the top of the list.
+        local stay = not target_page and self.selected and self.selected.y
+        updateItems(self, target_page, ...)
+        if not (self.layout and self.layout[2] and self.layout[2][self.cur_tab]) then return end
+        if stay and stay > 1 and self.layout[stay] and self.layout[stay][self.cur_tab] then
+            self:moveFocusTo(self.cur_tab, stay)
+        else
             self:moveFocusTo(self.cur_tab, 2)
         end
     end

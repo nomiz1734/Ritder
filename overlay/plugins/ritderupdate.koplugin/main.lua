@@ -12,6 +12,7 @@ docs/OTA-co-che-cap-nhat.md for the whole flow.
 local ConfirmBox = require("ui/widget/confirmbox")
 local Diagnostics = require("ritder/diagnostics")
 local InfoMessage = require("ui/widget/infomessage")
+local NightPages = require("ritder/night_pages")
 local Notification = require("ui/widget/notification")
 local ProgressDialog = require("progressdialog")
 local RitderInfo = require("ritderinfo")
@@ -187,10 +188,19 @@ function RitderUpdate.checkInChild()
     return { status = "error", err = err }
 end
 
+--- The switch in the menu wins over what this book was last read with.
+function RitderUpdate:onReaderReady()
+    NightPages.applyTo(self.ui)
+end
+
 -- Menu ---------------------------------------------------------------------
 
 function RitderUpdate:addToMainMenu(menu_items)
     RitderInfo.addToMainMenu(menu_items)
+    -- Under "Chế độ ban đêm": keep comics and illustrations in their own colors.
+    menu_items.ritder_night_pages = NightPages.menuItem(function()
+        return self.ui and self.ui.document and self.ui or nil
+    end)
     menu_items.ritder_update = {
         text_func = function()
             if state.installed then
