@@ -36,7 +36,7 @@ SHOTS = os.path.join(EMU, "shots")
 SCRIPTS = os.path.join(ROOT, "tests", "screens")
 DISTRO = "RitderEmu"
 DISTRO_DIR = os.path.join(ROOT, "vendor", "wsl", "distro")
-TIMEOUT_S = 300
+TIMEOUT_S = 900
 WSL_USERDATA = "/tmp/ritder-emu-userdata"
 
 
@@ -51,6 +51,22 @@ def setup() -> None:
     os.makedirs(DISTRO_DIR, exist_ok=True)
     subprocess.run(["wsl", "--import", DISTRO, DISTRO_DIR, rootfs, "--version", "1"], check=True)
     print(f"WSL1 distro {DISTRO} ready (remove with: wsl --unregister {DISTRO})")
+
+
+def build_package() -> None:
+    """The ARM64 package tests/screens/11_ota_install.lua unpacks. Rebuilding wipes dist/,
+    so this runs before the emulator tree is assembled."""
+    package = os.path.join(ROOT, "dist", "update", "ritder-update.tar.gz")
+    if os.path.exists(package):
+        return
+    version = build.read_text("VERSION").strip()
+    notes = os.path.join(ROOT, "release-notes.txt")
+    print("Building the OTA package first (dist/update)")
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools", "build.py")], check=True,
+                   stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools", "make_update.py"),
+                    os.path.join(ROOT, "dist", "Ritder"), os.path.join(ROOT, "dist", "update"),
+                    version, notes], check=True, stdout=subprocess.DEVNULL)
 
 
 def assemble() -> None:
@@ -187,6 +203,8 @@ def run_script(name: str) -> int:
         "RITDER_EMU_BOOKS": books,
         "RITDER_HOME_DIR": books,
         "KO_HOME": WSL_USERDATA,
+        # The package built by build.ps1, for the OTA script (a local file, no network).
+        "RITDER_EMU_PACKAGE": wsl_path(os.path.join(ROOT, "dist", "update", "ritder-update.tar.gz")),
         "LC_ALL": "C.UTF-8",
     }
     exports = " ".join(f"{k}='{v}'" for k, v in env.items())
@@ -213,10 +231,14 @@ def run_script(name: str) -> int:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # the app logs in Vietnamese
     args = sys.argv[1:]
     if args[:1] == ["--setup"]:
         setup()
         return 0
+    names = args or sorted(os.path.splitext(p)[0] for p in os.listdir(SCRIPTS) if p.endswith(".lua"))
+    if any("ota" in name for name in names):
+        build_package()
     assemble()
     names = args or sorted(os.path.splitext(p)[0] for p in os.listdir(SCRIPTS) if p.endswith(".lua"))
     failed = 0

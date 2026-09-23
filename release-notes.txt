@@ -1,5 +1,5 @@
-• Hết nhấp nháy khi di chuyển giữa các mục: màn hình chỉ hiện khung hình đã vẽ xong
-• Di chuyển nhanh hơn: chỉ vẽ lại 2 mục thay đổi thay vì cả màn hình
-• Sửa màu: mục đang chọn có nền xanh (bản trước hiện hồng cam), màu tô sách cũng đúng
-• Highlight gọn hơn: menu dùng nền bo góc nằm gọn giữa các vạch chia, bỏ gạch chân ngắn; danh sách có dải màu bên trái
-• Chế độ ban đêm: mục đang chọn có khung màu hổ phách, chữ vẫn rõ
+• Sửa lỗi bản 0.1.2 đứng mãi ở "Đang cài đặt…": app không còn tự thay các file nó đang chạy
+• Giờ app chỉ giải nén bản mới ra thư mục tạm, việc thay file do launch.sh làm lúc khởi động lại, mất vài giây
+• Cài lỗi thì tự trả lại bản cũ và báo cho bạn, không để treo
+• Có thanh tiến trình khi giải nén và tự dừng nếu 3 phút không nhúc nhích
+• Kiểm tra dung lượng thẻ nhớ trước khi tải, báo sớm nếu không đủ chỗ

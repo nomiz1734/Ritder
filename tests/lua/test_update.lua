@@ -65,87 +65,83 @@ function tests.sha256_matches_known_value()
     eq(Update.sha256File(root .. "/abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
 end
 
-function tests.install_replaces_files_keeps_userdata_and_backs_up()
+function tests.stage_unpacks_without_touching_the_app()
     local app, work, root = sandbox{
         ["luajit"] = "old luajit",
         ["reader.lua"] = "old reader",
         ["launch.sh"] = "old launch",
-        ["frontend/a.lua"] = "old a",
+        ["install.sh"] = "old install",
         ["userdata/settings.reader.lua"] = "my settings",
     }
     local pkg = package(root, {
         ["luajit"] = "@ELF_ARM64",
         ["reader.lua"] = "new reader",
         ["launch.sh"] = "new launch",
-        ["frontend/a.lua"] = "new a",
+        ["install.sh"] = "new install",
         ["frontend/b.lua"] = "brand new b",
-        ["userdata/settings.reader.lua"] = "must not win",
     })
-    local ok, err = Update.install(pkg, "0.2.0")
-    truthy(ok, err)
-    eq(util.readFile(app .. "/frontend/a.lua"), "new a")
-    eq(util.readFile(app .. "/frontend/b.lua"), "brand new b")
-    eq(util.readFile(app .. "/userdata/settings.reader.lua"), "my settings", "userdata is protected")
-    eq(util.readFile(work .. "/backup/frontend/a.lua"), "old a", "replaced file is backed up")
-    eq(util.readFile(work .. "/pending"), "0.2.0")
-    truthy(util.readFile(work .. "/added.txt"):find("frontend/b.lua", 1, true))
-    falsy(exists(work .. "/installing"), "marker removed after success")
-    falsy(exists(work .. "/staging"), "staging cleaned up")
-    falsy(exists(pkg), "package removed after install")
-    eq(Update.pendingVersion(), "0.2.0")
-end
-
-function tests.restore_backup_undoes_an_install()
-    local app, work, root = sandbox{
-        ["luajit"] = "old luajit", ["reader.lua"] = "old reader", ["launch.sh"] = "old launch",
-    }
-    local pkg = package(root, {
-        ["luajit"] = "@ELF_ARM64", ["reader.lua"] = "new reader", ["launch.sh"] = "new launch",
-        ["extra/new.lua"] = "added",
-    })
-    truthy(Update.install(pkg, "0.2.0"))
-    Update.restoreBackup(app, work)
+    local count, err = Update.stage(pkg, "0.2.0")
+    truthy(count, err)
+    eq(count, 5)
+    -- The running app is untouched: install.sh does the swap at the next start.
     eq(util.readFile(app .. "/reader.lua"), "old reader")
     eq(util.readFile(app .. "/luajit"), "old luajit")
-    falsy(exists(app .. "/extra/new.lua"), "added file removed")
-    falsy(exists(work .. "/backup"))
+    falsy(exists(app .. "/frontend/b.lua"))
+    eq(util.readFile(work .. "/staging/reader.lua"), "new reader")
+    eq(util.readFile(work .. "/ready"), "0.2.0")
+    eq(Update.readyVersion(), "0.2.0")
+    falsy(exists(pkg), "package removed once unpacked")
 end
 
-function tests.confirm_drops_rollback_data()
-    local _, work, root = sandbox{ ["luajit"] = "x", ["reader.lua"] = "x", ["launch.sh"] = "x" }
-    local pkg = package(root, { ["luajit"] = "@ELF_ARM64", ["reader.lua"] = "y", ["launch.sh"] = "y" })
-    truthy(Update.install(pkg, "0.2.0"))
-    Update.confirm()
-    falsy(exists(work .. "/pending"))
-    falsy(exists(work .. "/backup"))
-    eq(Update.pendingVersion(), nil)
-end
-
-function tests.install_rejects_wrong_architecture()
+function tests.stage_rejects_wrong_architecture()
     local app, work, root = sandbox{ ["reader.lua"] = "old reader" }
-    local pkg = package(root, { ["luajit"] = "@ELF_X86_64", ["reader.lua"] = "new", ["launch.sh"] = "new" })
-    local ok, err = Update.install(pkg, "0.2.0")
+    local pkg = package(root, {
+        ["luajit"] = "@ELF_X86_64", ["reader.lua"] = "new", ["launch.sh"] = "new", ["install.sh"] = "new",
+    })
+    local ok, err = Update.stage(pkg, "0.2.0")
     falsy(ok)
     truthy(err:find("ARM64", 1, true), err)
     eq(util.readFile(app .. "/reader.lua"), "old reader", "nothing touched")
-    falsy(exists(work .. "/pending"))
+    falsy(exists(work .. "/ready"))
+    falsy(exists(work .. "/staging"))
 end
 
-function tests.install_rejects_path_traversal_and_links()
-    local _, _, root = sandbox{}
-    local ok, err = Update.install(package(root, { ["../evil"] = "x", ["luajit"] = "@ELF_ARM64" }), "0.2.0")
+function tests.stage_rejects_path_traversal_and_links()
+    local _, work, root = sandbox{}
+    local ok, err = Update.stage(package(root, { ["../evil"] = "x", ["luajit"] = "@ELF_ARM64" }), "0.2.0")
     falsy(ok)
     truthy(err:find("không hợp lệ", 1, true), err)
-    ok, err = Update.install(package(root, { ["luajit"] = { link = "/bin/sh" } }), "0.2.0")
+    ok, err = Update.stage(package(root, { ["luajit"] = { link = "/bin/sh" } }), "0.2.0")
     falsy(ok)
     truthy(err:find("không được phép", 1, true), err)
+    falsy(exists(work .. "/ready"))
 end
 
-function tests.install_requires_core_files()
-    local _, _, root = sandbox{}
-    local ok, err = Update.install(package(root, { ["luajit"] = "@ELF_ARM64", ["launch.sh"] = "x" }), "0.2.0")
+function tests.stage_requires_core_files()
+    local _, work, root = sandbox{}
+    local ok, err = Update.stage(package(root, { ["luajit"] = "@ELF_ARM64", ["launch.sh"] = "x" }), "0.2.0")
     falsy(ok)
-    truthy(err:find("reader.lua", 1, true), err)
+    truthy(err:find("reader.lua", 1, true) or err:find("install.sh", 1, true), err)
+    falsy(exists(work .. "/ready"))
+end
+
+function tests.discard_drops_a_staged_update()
+    local _, work, root = sandbox{}
+    local pkg = package(root, {
+        ["luajit"] = "@ELF_ARM64", ["reader.lua"] = "r", ["launch.sh"] = "l", ["install.sh"] = "i",
+    })
+    truthy(Update.stage(pkg, "0.2.0"))
+    Update.discard()
+    falsy(exists(work .. "/ready"))
+    falsy(exists(work .. "/staging"))
+    eq(Update.readyVersion(), nil)
+end
+
+function tests.failed_version_is_reported_once()
+    local _, work = sandbox{}
+    util.writeFile(work .. "/failed", "0.2.0")
+    eq(Update.takeFailedVersion(), "0.2.0")
+    eq(Update.takeFailedVersion(), nil, "reading it clears it")
 end
 
 -- Manifest parsing with the network replaced by a canned response.

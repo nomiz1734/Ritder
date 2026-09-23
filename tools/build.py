@@ -34,6 +34,7 @@ DIST = os.path.join(DIST_ROOT, "Ritder")
 # Files that must keep the executable bit (in the zip and in the OTA tarball).
 EXECUTABLE = {
     "launch.sh",
+    "install.sh",
     "luajit",
     "reader.lua",
     "sdcv",
@@ -290,6 +291,7 @@ def main() -> None:
     write_build_info(version, update_url, pins["koreader"]["version"])
     copy_tree(os.path.join(ROOT, "package", "stock"), DIST)
     to_lf(os.path.join(DIST, "launch.sh"))
+    to_lf(os.path.join(DIST, "install.sh"))
     to_lf(os.path.join(DIST, "sdcv"))
 
     make_zip(os.path.join(DIST_ROOT, "Ritder-stock.zip"))

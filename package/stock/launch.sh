@@ -28,30 +28,8 @@ LOADER="$progdir/sys/ld-linux-aarch64.so.1"
 LIBPATH="$progdir/sys:$progdir/libs"
 CPU=/sys/devices/system/cpu/cpu0/cpufreq
 
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$USERDATA/update.log"
-}
-
-# Puts back the files replaced by the last update and deletes the ones it added.
-restore_backup() {
-    if [ -f "$UPD/added.txt" ]; then
-        while IFS= read -r f; do
-            case "$f" in
-                ""|/*|*..*) ;;
-                *) rm -f "$progdir/$f" ;;
-            esac
-        done < "$UPD/added.txt"
-    fi
-    if [ -d "$UPD/backup" ]; then
-        (cd "$UPD/backup" && find . -type f) | while IFS= read -r f; do
-            f=${f#./}
-            mkdir -p "$progdir/$(dirname "$f")"
-            rm -f "$progdir/$f"
-            mv -f "$UPD/backup/$f" "$progdir/$f"
-        done
-    fi
-    rm -rf "$UPD/backup" "$UPD/added.txt" "$UPD/pending" "$UPD/installing" "$UPD/staging"
-}
+# ritder_log, ritder_install_staged and ritder_restore_backup.
+. "$progdir/install.sh"
 
 # First start (not a re-run after an update or a rollback).
 if [ -z "${RITDER_RESTARTED:-}" ]; then
@@ -71,8 +49,14 @@ fi
 
 # An install that was cut short (power loss, crash) leaves a half-updated app: undo it.
 if [ -f "$UPD/installing" ]; then
-    log "update $(cat "$UPD/installing") was interrupted, restoring the previous files"
-    restore_backup
+    ritder_log "update $(cat "$UPD/installing") was interrupted, restoring the previous files"
+    ritder_restore_backup
+fi
+
+# The app unpacked an update and asked for a restart: swap the files in now, while
+# nothing is running out of them.
+if [ -f "$UPD/ready" ] && [ -d "$UPD/staging" ]; then
+    ritder_install_staged
 fi
 
 chmod +x "$LOADER" "$progdir/luajit" "$progdir/sdcv" "$progdir/sdcv.bin" 2>/dev/null
@@ -95,9 +79,9 @@ while true; do
     if [ "$code" -ne 0 ] && [ -f "$UPD/pending" ] && [ -d "$UPD/backup" ]; then
         # The new version failed before confirming it works: go back to the previous one.
         version=$(cat "$UPD/pending")
-        log "update $version failed (exit $code), rolled back"
+        ritder_log "update $version failed (exit $code), rolled back"
         tail -n 40 "$USERDATA/crash.log" >> "$USERDATA/update.log" 2>/dev/null
-        restore_backup
+        ritder_restore_backup
         echo "$version" > "$UPD/rolled_back"
         export RITDER_RESTARTED=1
         exec /bin/sh "$progdir/launch.sh"

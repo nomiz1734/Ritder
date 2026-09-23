@@ -26,6 +26,7 @@ local T = ffiutil.template
 local AUTO_CHECK_DELAY_S = 8
 local CONFIRM_AFTER_S = 10
 local POLL_S = 0.5
+local STALLED_S = 180 -- no progress for this long: let the user give up
 local RESTART_EXIT_CODE = 42
 local MAX_NOTES_LINES = 6
 
@@ -35,7 +36,7 @@ local state = {
     started = false,
     available = nil,  -- manifest of a newer version, once known
     job = nil,        -- { pid, manifest, background }
-    installed = nil,  -- version installed and waiting for a restart
+    installed = nil,  -- version unpacked and waiting for a restart to be installed
     progress = nil,   -- the open ProgressDialog, if any
     instance = nil,   -- the plugin instance of the current UI (file browser or reader)
 }
@@ -125,6 +126,15 @@ function RitderUpdate:onStartup()
         })
     end
 
+    local failed = Update.takeFailedVersion()
+    if failed then
+        UIManager:show(InfoMessage:new{
+            text = T("Không cài được bản %1 (không thay được file trên thẻ nhớ).\nRitder vẫn đang chạy bản %2.\n\nChi tiết: userdata/update.log",
+                failed, Update.currentVersion()),
+        })
+    end
+    state.installed = Update.readyVersion()
+
     local pending = Update.pendingVersion()
     if pending then
         Notification:notify(T("Đã cập nhật lên phiên bản %1", Update.currentVersion()), Notification.SOURCE_ALWAYS_SHOW)
@@ -172,7 +182,7 @@ function RitderUpdate:addToMainMenu(menu_items)
     menu_items.ritder_update = {
         text_func = function()
             if state.installed then
-                return T("Khởi động lại để dùng bản %1", state.installed)
+                return T("Khởi động lại để cài bản %1", state.installed)
             elseif state.job then
                 return "Đang tải bản cập nhật…"
             elseif state.available then
@@ -190,7 +200,7 @@ function RitderUpdate:subMenu()
         {
             text_func = function()
                 if state.installed then
-                    return T("Khởi động lại để dùng bản %1", state.installed)
+                    return T("Khởi động lại để cài bản %1", state.installed)
                 elseif state.job then
                     return "Xem tiến trình tải"
                 elseif state.available then
@@ -303,7 +313,7 @@ function RitderUpdate:startDownload(manifest)
     local job = { manifest = manifest, background = false }
     state.job = job
     job.pid = runInChild(function()
-        local ok, err = Update.downloadAndInstall(manifest)
+        local ok, err = Update.downloadAndStage(manifest)
         return { status = ok and "done" or "error", err = err }
     end, function(result)
         live(self):onJobDone(job, result)
@@ -330,14 +340,23 @@ end
 
 function RitderUpdate:pollProgress(job)
     if state.job ~= job then return end
+    local status, detail = Update.readStatus()
+    local size = lfs.attributes(Update.packagePath(), "size") or 0
+    -- Watchdog: the job is meant to make progress (bytes downloaded, then files unpacked).
+    local mark = tostring(status) .. ":" .. tostring(detail) .. ":" .. size
+    if mark ~= job.mark then
+        job.mark, job.mark_at = mark, os.time()
+    elseif job.mark_at and os.time() - job.mark_at > STALLED_S then
+        job.mark_at = nil
+        self:onStalled(job)
+        return
+    end
     local progress = state.progress
     if progress then
-        local status = Update.readStatus()
-        if status == "installing" then
-            progress:setTitle("Đang cài đặt…")
-            progress:setProgress(1, "")
+        if status == "unpacking" then
+            progress:setTitle("Đang giải nén…")
+            progress:setProgress(1, detail ~= "" and T("%1 tệp", detail) or "")
         else
-            local size = lfs.attributes(Update.packagePath(), "size") or 0
             local total = job.manifest.size
             if total and total > 0 then
                 local fraction = size / total
@@ -360,7 +379,7 @@ function RitderUpdate:onJobDone(job, result)
     if result.status == "done" then
         state.available = nil
         state.installed = job.manifest.version
-        logger.info("Ritder update:", job.manifest.version, "installed")
+        logger.info("Ritder update:", job.manifest.version, "unpacked, waiting for a restart")
         self:askRestart(job.manifest.version)
     else
         local err = result.err
@@ -373,16 +392,30 @@ end
 
 function RitderUpdate:askRestart(version)
     UIManager:show(ConfirmBox:new{
-        text = T("Đã cài xong phiên bản %1.\nKhởi động lại để dùng bản mới.", version),
+        text = T("Đã tải xong phiên bản %1.\nKhởi động lại để cài (mất vài giây).", version),
         ok_text = "Khởi động lại",
         cancel_text = "Để sau",
         ok_callback = function() self:restart() end,
     })
 end
 
+--- Nothing has moved for a while: let the user stop instead of watching a frozen dialog.
+function RitderUpdate:onStalled(job)
+    if job.pid then ffiutil.terminateSubProcess(job.pid) end
+    state.job = nil
+    if state.progress then
+        UIManager:close(state.progress)
+        state.progress = nil
+    end
+    logger.warn("Ritder update: no progress for", STALLED_S, "s, gave up")
+    Update.discard()
+    self:showFailed(T("quá trình cập nhật không nhúc nhích trong %1 giây nên đã dừng", STALLED_S),
+        function() live(self):startDownload(job.manifest) end)
+end
+
 function RitderUpdate:restart()
     -- Close the book properly (saves position and settings), then exit with 42:
-    -- launch.sh re-runs itself, so a new launch.sh from the package is used too.
+    -- launch.sh re-runs itself, and installs the unpacked update before starting the app.
     self.ui.menu:exitOrRestart(function() UIManager:quit(RESTART_EXIT_CODE) end)
 end
 

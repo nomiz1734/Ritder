@@ -7,15 +7,20 @@ download of several tens of MB.
 
 Files, all under the KOReader data dir (`userdata/` next to launch.sh):
 
-    update/package.tar.gz  package being downloaded (removed after install)
-    update/staging/        unpack area (removed after install)
+    update/package.tar.gz  package being downloaded (removed once unpacked)
+    update/staging/        the unpacked new version, waiting for the next start
+    update/ready           version unpacked and ready: launch.sh installs it before the app runs
+    update/installing      launch.sh is swapping files right now (a leftover means it was cut short)
     update/backup/         the files the last install replaced (for rollback)
     update/added.txt       files the last install created (removed on rollback)
-    update/installing      files are being replaced right now (launch.sh rolls back if it survives)
     update/pending         version waiting for confirmation (the new version ran 10 s)
+    update/failed          the swap failed; the old version is still in place
     update/status          progress of the background job, for the UI
 
-launch.sh reads pending/backup/added.txt to roll back when a fresh update crashes.
+The app itself never replaces the files it is running from: it only unpacks into `staging/`.
+`install.sh` (called by launch.sh, before the app starts) moves them into place. On the SD
+card's FAT/exFAT, replacing a file that is being executed or is memory-mapped can block
+forever, which is what hung the install in 0.1.2.
 
 @module ritder.update
 ]]
@@ -31,7 +36,7 @@ local Update = {
     -- Paths in a package that must never overwrite the user's data.
     PROTECTED = { "^userdata/", "^userdata$", "^settings%.json$" },
     -- The package must contain these, and `luajit` must be a Linux ARM64 program.
-    REQUIRED = { "launch.sh", "reader.lua", "luajit" },
+    REQUIRED = { "launch.sh", "install.sh", "reader.lua", "luajit" },
     ARCH_CHECK = "luajit",
 }
 
@@ -433,7 +438,8 @@ end
 
 --- Unpacks a .tar.gz into `dest`, refusing anything that is not a plain file or directory
 -- and any path that would land outside `dest`.
-function Update.unpack(archive_path, dest)
+-- `progress`, if given, is called with the number of files written so far, every 64 files.
+function Update.unpack(archive_path, dest, progress)
     require("ffi/libarchive_h")
     local libarchive = ffi.loadlib("archive", "13")
     local ARCHIVE_WARN = -20
@@ -484,6 +490,7 @@ function Update.unpack(archive_path, dest)
                 out:close()
                 if not result then break end
                 count = count + 1
+                if progress and count % 64 == 0 then progress(count) end
             else
                 result, err = nil, "gói cập nhật chứa mục không được phép (link/thiết bị): " .. rel
                 break
@@ -508,34 +515,26 @@ function Update.isArm64Elf(path)
     return machine == 0xB7
 end
 
---- Puts the backed-up files back and removes the ones the install added.
-function Update.restoreBackup(app_dir, work_dir)
-    local backup = joinPath(work_dir, "backup")
-    local added = readFile(joinPath(work_dir, "added.txt")) or ""
-    for rel in added:gmatch("[^\n]+") do
-        if Update.isSafePath(rel) then os.remove(joinPath(app_dir, rel)) end
-    end
-    if isDir(backup) then
-        for _, rel in ipairs(listFiles(backup)) do
-            local dst = joinPath(app_dir, rel)
-            mkdirP(dst:match("^(.*)/[^/]+$"))
-            moveFile(joinPath(backup, rel), dst)
-        end
-    end
-    rmrf(backup)
-    os.remove(joinPath(work_dir, "added.txt"))
+--- Free bytes on the filesystem holding `path` (nil when it cannot be read).
+function Update.freeSpace(path)
+    local ok, total, free = pcall(require("ffi/util").df, path)
+    if ok and free and free > 0 then return free end
+    return nil, total
 end
 
---- Installs a downloaded package over the app directory.
--- Replaced files go to update/backup, new ones are listed in update/added.txt,
--- and update/pending is written last. Never touches userdata/.
-function Update.install(package_path, version)
-    local app_dir, work_dir = Update.appDir(), Update.workDir()
+--- Unpacks a downloaded package into update/staging and marks it ready.
+-- Nothing in the app directory is touched: launch.sh (install.sh) swaps the files in
+-- before the app starts again, when none of them is open, mapped or running.
+function Update.stage(package_path, version)
+    local work_dir = Update.workDir()
     local staging = joinPath(work_dir, "staging")
     rmrf(staging)
     mkdirP(staging)
 
-    local count, err = Update.unpack(package_path, staging)
+    local count, err = Update.unpack(package_path, staging, function(done)
+        -- Keeps the UI's watchdog happy and shows that something is happening.
+        Update.setStatus("unpacking", tostring(done))
+    end)
     if not count then
         rmrf(staging)
         return nil, err
@@ -551,67 +550,40 @@ function Update.install(package_path, version)
         return nil, "gói cập nhật không đúng kiến trúc ARM64"
     end
 
-    -- A previous, confirmed install may have left its backup behind: start clean.
-    local backup = joinPath(work_dir, "backup")
-    rmrf(backup)
-    os.remove(joinPath(work_dir, "added.txt"))
-    local added = {}
-    local ok = true
-    -- While this marker exists the app directory is half old, half new: launch.sh restores
-    -- the backup if the install is cut short (power loss, crash).
-    writeFile(joinPath(work_dir, "installing"), version)
-    for i, rel in ipairs(listFiles(staging)) do
-        if not isProtected(rel) then
-            local src, dst = joinPath(staging, rel), joinPath(app_dir, rel)
-            if exists(dst) then
-                local bak = joinPath(backup, rel)
-                mkdirP(bak:match("^(.*)/[^/]+$"))
-                ok, err = moveFile(dst, bak)
-            else
-                table.insert(added, rel)
-                ok, err = mkdirP(dst:match("^(.*)/[^/]+$")), nil
-            end
-            if ok then
-                ok, err = moveFile(src, dst)
-            end
-            if not ok then
-                err = "không chép được " .. rel .. ": " .. tostring(err)
-                break
-            end
-        end
-        -- Keep added.txt current, so a failure half-way can still be undone.
-        writeFile(joinPath(work_dir, "added.txt"), table.concat(added, "\n"))
-    end
-    writeFile(joinPath(work_dir, "added.txt"), table.concat(added, "\n"))
-    rmrf(staging)
-    if not ok then
-        logger.warn("Ritder update: install failed, restoring:", err)
-        Update.restoreBackup(app_dir, work_dir)
-        os.remove(joinPath(work_dir, "installing"))
-        return nil, err
-    end
-    writeFile(joinPath(work_dir, "pending"), version)
-    os.remove(joinPath(work_dir, "installing"))
     os.remove(package_path)
-    return true
+    writeFile(joinPath(work_dir, "ready"), version)
+    logger.info("Ritder update:", version, "unpacked,", count, "files ready to install")
+    return count
 end
 
---- The whole background job: download, verify, install. Reports through update/status.
-function Update.downloadAndInstall(manifest)
+--- The whole background job: download, verify, unpack. Reports through update/status.
+function Update.downloadAndStage(manifest)
+    local work_dir = Update.workDir()
+    mkdirP(work_dir)
+    -- The package plus everything it unpacks to, with room to spare.
+    local needed = (manifest.size or 50 * 1024 * 1024) * 4
+    local free = Update.freeSpace(work_dir)
+    if free and free < needed then
+        local err = string.format("thẻ nhớ còn %d MB, cần khoảng %d MB để cập nhật",
+            math.floor(free / 1024 / 1024), math.ceil(needed / 1024 / 1024))
+        Update.setStatus("failed", err)
+        return nil, err
+    end
+
     Update.setStatus("downloading")
     local path, err = Update.download(manifest)
     if not path then
         Update.setStatus("failed", err)
         return nil, err
     end
-    Update.setStatus("installing")
+    Update.setStatus("unpacking")
     local ok
-    ok, err = Update.install(path, manifest.version)
+    ok, err = Update.stage(path, manifest.version)
     if not ok then
         Update.setStatus("failed", err)
         return nil, err
     end
-    Update.setStatus("done", manifest.version)
+    Update.setStatus("ready", manifest.version)
     return true
 end
 
@@ -624,6 +596,38 @@ function Update.pendingVersion()
         data = data:match("^%s*(.-)%s*$")
         if data ~= "" then return data end
     end
+    return nil
+end
+
+--- Version whose install failed in launch.sh, if any. Reading it clears it.
+function Update.takeFailedVersion()
+    local path = joinPath(Update.workDir(), "failed")
+    local data = readFile(path)
+    os.remove(path)
+    if data then
+        data = data:match("^%s*(.-)%s*$")
+        if data ~= "" then return data end
+    end
+    return nil
+end
+
+--- Version unpacked and waiting for the next start, if any.
+function Update.readyVersion()
+    local data = readFile(joinPath(Update.workDir(), "ready"))
+    if data then
+        data = data:match("^%s*(.-)%s*$")
+        if data ~= "" then return data end
+    end
+    return nil
+end
+
+--- Throws away a downloaded or unpacked update (the user cancelled).
+function Update.discard()
+    local work_dir = Update.workDir()
+    rmrf(joinPath(work_dir, "staging"))
+    os.remove(joinPath(work_dir, "ready"))
+    os.remove(Update.packagePath())
+    os.remove(joinPath(work_dir, "status"))
 end
 
 --- The new version has run long enough: drop the rollback data.
