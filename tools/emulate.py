@@ -245,6 +245,9 @@ def main() -> int:
     for name in names:
         if run_script(name) != 0:
             failed += 1
+        if "ota" in name:
+            # That script let install.sh swap in the ARM64 package: put the x86_64 tree back.
+            assemble()
     return 1 if failed else 0
 
 

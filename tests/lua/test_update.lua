@@ -71,6 +71,7 @@ function tests.stage_unpacks_without_touching_the_app()
         ["reader.lua"] = "old reader",
         ["launch.sh"] = "old launch",
         ["install.sh"] = "old install",
+        ["logging.sh"] = "old logging",
         ["userdata/settings.reader.lua"] = "my settings",
     }
     local pkg = package(root, {
@@ -78,11 +79,12 @@ function tests.stage_unpacks_without_touching_the_app()
         ["reader.lua"] = "new reader",
         ["launch.sh"] = "new launch",
         ["install.sh"] = "new install",
+        ["logging.sh"] = "new logging",
         ["frontend/b.lua"] = "brand new b",
     })
     local count, err = Update.stage(pkg, "0.2.0")
     truthy(count, err)
-    eq(count, 5)
+    eq(count, 6)
     -- The running app is untouched: install.sh does the swap at the next start.
     eq(util.readFile(app .. "/reader.lua"), "old reader")
     eq(util.readFile(app .. "/luajit"), "old luajit")
@@ -97,6 +99,7 @@ function tests.stage_rejects_wrong_architecture()
     local app, work, root = sandbox{ ["reader.lua"] = "old reader" }
     local pkg = package(root, {
         ["luajit"] = "@ELF_X86_64", ["reader.lua"] = "new", ["launch.sh"] = "new", ["install.sh"] = "new",
+        ["logging.sh"] = "new",
     })
     local ok, err = Update.stage(pkg, "0.2.0")
     falsy(ok)
@@ -129,6 +132,7 @@ function tests.discard_drops_a_staged_update()
     local _, work, root = sandbox{}
     local pkg = package(root, {
         ["luajit"] = "@ELF_ARM64", ["reader.lua"] = "r", ["launch.sh"] = "l", ["install.sh"] = "i",
+        ["logging.sh"] = "g",
     })
     truthy(Update.stage(pkg, "0.2.0"))
     Update.discard()

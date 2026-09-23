@@ -10,6 +10,7 @@ docs/OTA-co-che-cap-nhat.md for the whole flow.
 ]]
 
 local ConfirmBox = require("ui/widget/confirmbox")
+local Diagnostics = require("ritder/diagnostics")
 local InfoMessage = require("ui/widget/infomessage")
 local Notification = require("ui/widget/notification")
 local ProgressDialog = require("progressdialog")
@@ -123,6 +124,17 @@ function RitderUpdate:onStartup()
         UIManager:show(InfoMessage:new{
             text = T("Bản cập nhật %1 bị lỗi khi khởi động nên Ritder đã quay về bản %2.\n\nChi tiết: userdata/update.log",
                 rolled_back:match("^%s*(.-)%s*$"), Update.currentVersion()),
+        })
+    end
+
+    -- launch.sh writes this when the app exited badly: offer to gather the logs right away.
+    local crash_code = Diagnostics.takeCrashCode()
+    if crash_code then
+        UIManager:show(ConfirmBox:new{
+            text = T("Lần chạy trước kết thúc bất thường (mã %1).\nGom log lại để gửi báo lỗi?", crash_code),
+            ok_text = "Gom log",
+            cancel_text = "Bỏ qua",
+            ok_callback = function() RitderInfo.collectLogs() end,
         })
     end
 

@@ -35,6 +35,7 @@ DIST = os.path.join(DIST_ROOT, "Ritder")
 EXECUTABLE = {
     "launch.sh",
     "install.sh",
+    "logging.sh",
     "luajit",
     "reader.lua",
     "sdcv",
@@ -292,6 +293,7 @@ def main() -> None:
     copy_tree(os.path.join(ROOT, "package", "stock"), DIST)
     to_lf(os.path.join(DIST, "launch.sh"))
     to_lf(os.path.join(DIST, "install.sh"))
+    to_lf(os.path.join(DIST, "logging.sh"))
     to_lf(os.path.join(DIST, "sdcv"))
 
     make_zip(os.path.join(DIST_ROOT, "Ritder-stock.zip"))

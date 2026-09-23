@@ -87,5 +87,30 @@ check "interrupted install removed its new file" "no" "$([ -f "$progdir/frontend
 check "markers cleared" "no" "$([ -f "$UPD/installing" ] && echo yes || echo no)"
 cleanup
 
+# --- the run history (logging.sh) ----------------------------------------------
+setup
+LOGGING_SH=$(dirname "$INSTALL_SH")/logging.sh
+mkdir -p "$progdir/frontend/ritder"
+echo 'return { version = "0.1.4", }' > "$progdir/frontend/ritder/build_info.lua"
+# shellcheck source=/dev/null
+. "$LOGGING_SH"
+echo "old run" > "$USERDATA/crash.log"
+ritder_rotate_logs
+check "previous run's log kept" "old run" "$(cat "$USERDATA/crash.log.1")"
+ritder_session_start
+check "start noted with the version" "yes" "$(grep -c "Ritder 0.1.4" "$USERDATA/ritder.log" > /dev/null && echo yes || echo no)"
+echo "boom" > "$USERDATA/crash.log"
+ritder_session_end 1
+check "bad exit noted" "yes" "$(grep -q "thoát bất thường (mã 1)" "$USERDATA/ritder.log" && echo yes || echo no)"
+check "crash marker written" "1" "$(cat "$USERDATA/crashed")"
+check "crash output copied into the history" "yes" "$(grep -q "boom" "$USERDATA/ritder.log" && echo yes || echo no)"
+ritder_session_end 42
+check "restart for an update is not a crash" "no" "$([ -f "$USERDATA/crashed.42" ] && echo yes || echo no)"
+i=0
+while [ "$i" -lt 900 ]; do echo "line $i" >> "$USERDATA/ritder.log"; i=$((i + 1)); done
+ritder_rotate_logs
+check "history trimmed" "800" "$(wc -l < "$USERDATA/ritder.log" | tr -d ' ')"
+cleanup
+
 echo "$((tests - fails))/$tests passed"
 [ "$fails" -eq 0 ]

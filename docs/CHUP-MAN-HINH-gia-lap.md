@@ -1,6 +1,6 @@
 # Chụp ảnh màn hình Ritder bằng chế độ giả lập trên PC
 
-*Viết ngày 22/09/2026, cập nhật 23/09/2026 theo code bản 0.1.2. Code chính: `tools/emulate.py`, `overlay/frontend/device/trimui/emulator.lua`, `overlay/frontend/device/trimui/emu_framebuffer.lua`, `tests/screens/*.lua`.*
+*Viết ngày 22/09/2026, cập nhật 23/09/2026 theo code bản 0.1.4. Code chính: `tools/emulate.py`, `overlay/frontend/device/trimui/emulator.lua`, `overlay/frontend/device/trimui/emu_framebuffer.lua`, `tests/screens/*.lua`.*
 
 ## 1. Tóm tắt
 
@@ -64,6 +64,8 @@ Tên nút: `A B X Y L1 R1 L2 R2 START SELECT MENU UP DOWN LEFT RIGHT`.
 | `08_series_list` | Thư mục 8 tập (2 trang danh sách): mở tập 3, đọc, quay lại, lên/xuống, lật trang danh sách; mỗi ảnh đúng **một** dòng sáng |
 | `09_night_mode` | Chế độ ban đêm: dòng/nút đang chọn có khung màu hổ phách, chữ vẫn đọc được |
 | `10_rotation` | Xoay dọc: vùng refresh đổi đúng sang tọa độ vật lý |
+| `11_ota_install` | Trọn vòng cập nhật: kiểm tra thật qua GitHub, giải nén gói vừa build, rồi `install.sh` thay file |
+| `12_logs` | Báo "lần chạy trước bị lỗi", gom log, và nội dung file `ritder-log.txt` |
 
 ### 4.1 Số liệu mỗi bước
 
@@ -78,6 +80,14 @@ EMU key DOWN      paint 0.0 ms, refreshed  3.3% of the screen   ← hộp thoạ
 Trước 0.1.2 mỗi lần DOWN vẽ lại cả cửa sổ và refresh 100% màn hình. Thời gian đo trên PC nhanh hơn máy nhiều lần, chỉ để so tương đối.
 
 ## 5. Những gì giả lập đã bắt được
+
+### Bản 0.1.4
+
+- Trong hộp thoại hỏi đáp, nút được chọn sẵn là nút **hủy** (KOReader xếp nút hủy trước cho màn cảm ứng), nên bấm A lại hóa ra "Bỏ qua" / "Để sau". Giờ hộp thoại tự chọn nút đồng ý.
+
+### Bản 0.1.3
+
+- Gói cập nhật cũ (không có `install.sh`) bị từ chối kèm thông báo rõ ràng, thay vì cài hỏng.
 
 ### Bản 0.1.2
 

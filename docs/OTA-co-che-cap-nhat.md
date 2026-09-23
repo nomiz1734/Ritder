@@ -1,6 +1,6 @@
 # Cơ chế cập nhật OTA của Ritder
 
-*Viết ngày 22/09/2026, cập nhật 23/09/2026 theo code bản 0.1.3. Các file được nhắc tới: `overlay/frontend/ritder/update.lua`, `overlay/plugins/ritderupdate.koplugin/main.lua`, `package/stock/launch.sh`, `package/stock/install.sh`, `tools/build.py`, `tools/make_update.py`, `tools/publish_release.py`, `build.ps1`.*
+*Viết ngày 22/09/2026, cập nhật 23/09/2026 theo code bản 0.1.4. Các file được nhắc tới: `overlay/frontend/ritder/update.lua`, `overlay/plugins/ritderupdate.koplugin/main.lua`, `package/stock/launch.sh`, `package/stock/install.sh`, `tools/build.py`, `tools/make_update.py`, `tools/publish_release.py`, `build.ps1`.*
 
 Cơ chế này làm theo thiết kế OTA của Spoty (cùng máy TrimUI Brick Pro, cùng GitHub Releases), có thay đổi ở những chỗ Ritder khác Spoty: app là KOReader (Lua + nhiều thư viện) chứ không phải một file chạy duy nhất, nên **mọi file bị thay đều được sao lưu**, không riêng file chạy chính.
 
@@ -195,7 +195,11 @@ done
 | `userdata/update/rolled_back` | Vừa quay về bản cũ; app báo rồi xóa |
 | `userdata/update/status` | Trạng thái tiến trình tải/giải nén, cho giao diện đọc |
 | `userdata/update.log` | Lịch sử cài đặt, quay về bản cũ, cài dở |
+| `userdata/ritder.log` | Lịch sử mở/thoát app (800 dòng gần nhất), do `logging.sh` ghi |
+| `userdata/crashed` | Lần chạy trước thoát bất thường; app hỏi gom log rồi xóa |
 | `userdata/crash.log` | Toàn bộ log của lần chạy gần nhất |
+| `userdata/crash.log.1` | Như trên, của lần chạy trước |
+| `userdata/ritder-log.txt` | File tổng hợp để gửi báo lỗi (START → Giúp đỡ → Gom log để gửi) |
 | `userdata/launch.log` | Bản sao `crash.log` khi app thoát bằng lỗi |
 
 ## 5. Trên PC: phát hành một bản mới
@@ -278,6 +282,7 @@ done
 | "file tải về bị hỏng (sai SHA-256)" / "bị thiếu" | Mạng chập chờn, hoặc gói trên GitHub không khớp `update.json` | Thử lại; nếu vẫn lỗi, kiểm tra lại bằng lệnh ở mục 5.1 bước 8 |
 | "gói cập nhật không đúng kiến trúc ARM64" | Phát hành nhầm gói | Build lại bằng `build.ps1`, phát hành lại |
 | "Không cài được bản X (không thay được file trên thẻ nhớ)" | `install.sh` không thay được file (thẻ lỗi, hết chỗ) | Xem `userdata/update.log`; app vẫn chạy bản cũ, có thể cài tay |
+| Lỗi nào khác, hoặc app tự thoát | | START → Giúp đỡ → **Gom log để gửi**, rồi gửi `userdata/ritder-log.txt` |
 | "quá trình cập nhật không nhúc nhích trong 180 giây" | Mạng đứt giữa chừng hoặc thẻ nhớ quá chậm | Bấm Thử lại; nếu lặp lại, cài tay bằng `Ritder-stock.zip` |
 | Cập nhật xong app mở rồi báo đã quay về bản cũ | Bản mới crash lúc khởi động | Xem `userdata/update.log` |
 | App không mở được sau cập nhật | Cả hai bản đều lỗi, hoặc file bị hỏng | Cài tay: giải nén `Ritder-stock.zip`, chép đè vào `Apps/Ritder` (không xóa `userdata/`) |

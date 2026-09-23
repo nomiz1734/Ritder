@@ -9,7 +9,8 @@ the one cue of where you are, and on the Brick's LCD it is easy to miss. Here:
   menu's separator lines, and no underline;
 * list rows (MenuItem, CoverBrowser's ListMenuItem) get a light-blue tint over the whole
   row plus an accent bar on the left; grid tiles (MosaicMenuItem) a tint and a frame;
-* dialog buttons get the tint and a frame instead of turning black;
+* dialog buttons get the tint and a frame instead of turning black, and a confirmation
+  dialog starts on the button that confirms, so A says yes and B says no;
 * the reader's text cursor (UP/DOWN while reading) gets a yellow box and an orange cross.
 
 In night mode the screen buffer is inverted: tints are skipped (they could only darken) and
@@ -217,6 +218,39 @@ local function patchReaderCursor()
     end
 end
 
+--- Finds the ButtonTable inside a dialog (it is the widget that handles D-pad focus).
+local function findButtonTable(widget, depth)
+    if type(widget) ~= "table" or depth > 6 then return nil end
+    if widget.layout and widget.buttons and widget.moveFocusTo then return widget end
+    for i = 1, #widget do
+        local found = findButtonTable(widget[i], depth + 1)
+        if found then return found end
+    end
+    if widget.movable then return findButtonTable(widget.movable, depth + 1) end
+    return nil
+end
+
+--- KOReader puts the cancel button first and focuses it, which suits a touch screen.
+-- With a gamepad, A is "yes": focus the button that confirms, so A confirms and B cancels.
+local function patchConfirmBox()
+    local ConfirmBox = require("ui/widget/confirmbox")
+    local init = ConfirmBox.init
+    function ConfirmBox:init(...)
+        init(self, ...)
+        if self.no_ok_button then return end
+        local buttons = findButtonTable(self, 0)
+        if not buttons or not buttons.layout then return end
+        for y, row in ipairs(buttons.layout) do
+            for x, button in ipairs(row) do
+                if button.text == self.ok_text then
+                    buttons:moveFocusTo(x, y)
+                    return
+                end
+            end
+        end
+    end
+end
+
 -- Menu navigation ------------------------------------------------------------
 
 local function patchTouchMenuKeys(TouchMenu)
@@ -338,6 +372,7 @@ function Theme.install()
     local ok2, Menu = pcall(require, "ui/widget/menu")
     if ok2 then patchRowClass(findLocal(Menu, "MenuItem"), "MenuItem", "row") end
     patchButton()
+    patchConfirmBox()
     patchReaderCursor()
 end
 

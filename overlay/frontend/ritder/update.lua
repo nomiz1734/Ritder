@@ -36,7 +36,7 @@ local Update = {
     -- Paths in a package that must never overwrite the user's data.
     PROTECTED = { "^userdata/", "^userdata$", "^settings%.json$" },
     -- The package must contain these, and `luajit` must be a Linux ARM64 program.
-    REQUIRED = { "launch.sh", "install.sh", "reader.lua", "luajit" },
+    REQUIRED = { "launch.sh", "install.sh", "logging.sh", "reader.lua", "luajit" },
     ARCH_CHECK = "luajit",
 }
 

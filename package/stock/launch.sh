@@ -30,6 +30,8 @@ CPU=/sys/devices/system/cpu/cpu0/cpufreq
 
 # ritder_log, ritder_install_staged and ritder_restore_backup.
 . "$progdir/install.sh"
+# ritder_note, ritder_rotate_logs, ritder_session_start and ritder_session_end.
+. "$progdir/logging.sh"
 
 # First start (not a re-run after an update or a rollback).
 if [ -z "${RITDER_RESTARTED:-}" ]; then
@@ -66,8 +68,11 @@ if ! "$LOADER" --version > /dev/null 2>&1; then
 fi
 
 while true; do
+    ritder_rotate_logs
+    ritder_session_start
     "$LOADER" --library-path "$LIBPATH" "$progdir/luajit" reader.lua > "$USERDATA/crash.log" 2>&1
     code=$?
+    ritder_session_end "$code"
     if [ "$code" -eq 42 ]; then
         # An update was installed: start over with the new launcher and binaries.
         export RITDER_RESTARTED=1

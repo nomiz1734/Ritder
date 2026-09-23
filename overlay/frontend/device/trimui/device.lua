@@ -86,6 +86,12 @@ function TrimUIBrickPro:init()
     end
 
     Generic.init(self)
+
+    -- What the logs should say about this run (see ritder/diagnostics.lua).
+    local diag_ok, diagnostics = pcall(require, "ritder/diagnostics")
+    if diag_ok then
+        pcall(diagnostics.logStartup)
+    end
 end
 
 function TrimUIBrickPro:setEventHandlers(UIManager)

@@ -2,11 +2,11 @@
 
 App đọc sách cho **TrimUI Brick Pro**, dựa trên [KOReader](https://github.com/koreader/koreader). Ưu tiên đọc mượt PDF và truyện tranh CBZ/CBR trên màn hình LCD 1024×768, điều khiển hoàn toàn bằng nút bấm, tự cập nhật qua GitHub Releases.
 
-Phiên bản hiện tại: **0.1.3** (dựa trên KOReader v2026.07.1).
+Phiên bản hiện tại: **0.1.4** (dựa trên KOReader v2026.07.1).
 
 > Đã chạy trên Brick Pro thật (firmware gốc): màn hình, nút bấm, pin, tiếng Việt. Giao diện được kiểm tra thêm bằng giả lập trên PC: [docs/CHUP-MAN-HINH-gia-lap.md](docs/CHUP-MAN-HINH-gia-lap.md).
 >
-> **Đang dùng 0.1.0, 0.1.1 hoặc 0.1.2?** Cách cài của các bản đó có lỗi (0.1.0 không kiểm tra được bản mới; 0.1.1 và 0.1.2 treo ở bước "Đang cài đặt" vì app tự thay file của chính nó). Hãy cài 0.1.3 **bằng tay một lần**: giải nén `Ritder-stock.zip`, chép đè vào `Apps/Ritder`, giữ nguyên `userdata/`. Từ 0.1.3 trở đi cập nhật qua MENU.
+> **Đang dùng 0.1.2 trở về trước?** Cách cài của các bản đó có lỗi (0.1.0 không kiểm tra được bản mới; 0.1.1 và 0.1.2 treo ở bước "Đang cài đặt" vì app tự thay file của chính nó). Hãy cài bản mới nhất **bằng tay một lần**: giải nén `Ritder-stock.zip`, chép đè vào `Apps/Ritder`, giữ nguyên `userdata/`. Từ 0.1.3 trở đi cập nhật qua MENU.
 
 ## Cài đặt
 
@@ -35,6 +35,28 @@ Trong menu chính: ↑ ↓ chọn mục, ← → đổi tab, A mở, ← hoặc 
 
 Giữ D-pad hoặc nút vai để lặp. Đổi cách gán nút: tạo `userdata/settings/event_map.lua` (cùng dạng với `overlay/frontend/device/trimui/event_map.lua`).
 
+## Khi có lỗi: gửi log
+
+Trong app: **START → Giúp đỡ → Gom log để gửi**. App ghi mọi nhật ký vào một file duy nhất:
+
+```
+Apps/Ritder/userdata/ritder-log.txt
+```
+
+Tắt máy, cắm thẻ vào máy tính, chép file đó ra và gửi kèm khi báo lỗi. Nội dung gồm cấu hình máy (phiên bản, màn hình, nút bấm nhận được, dung lượng thẻ, RAM), lịch sử mở/thoát app, lịch sử cập nhật, log của lần chạy này và lần chạy trước.
+
+Nếu lần chạy trước kết thúc bất thường, app tự hỏi có gom log không ngay khi mở lại. Với lỗi khó tái hiện, bật thêm **Giúp đỡ → Ghi log chi tiết** rồi làm lại thao tác gây lỗi.
+
+Các file log trên thẻ (`Apps/Ritder/userdata/`):
+
+| File | Nội dung |
+|---|---|
+| `ritder-log.txt` | File tổng hợp để gửi, tạo ra khi bấm "Gom log để gửi" |
+| `ritder.log` | Lịch sử mở/thoát app, kèm phần cuối log của lần thoát lỗi (giữ 800 dòng gần nhất) |
+| `crash.log` | Toàn bộ log của lần chạy hiện tại |
+| `crash.log.1` | Như trên, của lần chạy trước |
+| `update.log` | Lịch sử cài đặt bản cập nhật, quay về bản cũ |
+
 ## Kiến trúc
 
 Ritder là **KOReader gốc + một lớp chồng (overlay)**, không phải bản sao toàn bộ mã nguồn KOReader:
@@ -46,9 +68,10 @@ overlay/                     chép đè lên cây KOReader:
   frontend/ritder/update.lua lõi OTA (không có giao diện, chạy được trong tiến trình con)
   frontend/ritder/brand.lua  đổi mọi chuỗi "KOReader" thành "Ritder" (qua gettext)
   frontend/ritder/ui_theme.lua  highlight mục đang chọn, chỉ vẽ lại 2 mục khi đổi focus, ← → đổi tab, con trỏ chọn chữ
+  frontend/ritder/diagnostics.lua  thông tin máy ghi vào log, và gom log thành một file để gửi
   resources/koreader.{png,svg}  logo Ritder thay logo KOReader
   plugins/ritderupdate.koplugin  giao diện OTA (MENU, hộp thoại, tiến trình tải)
-package/stock/               launch.sh, install.sh (thay file khi cập nhật), config.json, icon, cài đặt lần đầu
+package/stock/               launch.sh, install.sh (thay file khi cập nhật), logging.sh (lịch sử chạy), config.json, icon, cài đặt lần đầu
 tools/build.py               ghép dist/Ritder: tải + kiểm SHA-256 + chồng overlay + vá 3 chỗ
 tools/make_update.py         gói OTA + update.json
 tools/publish_release.py     tạo GitHub Release
