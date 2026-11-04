@@ -15,6 +15,11 @@ import sys
 import urllib.error
 import urllib.request
 
+# GitHub release output contains Vietnamese notes; keep publishing usable on
+# Windows consoles whose default code page is not UTF-8.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ASSETS = [
