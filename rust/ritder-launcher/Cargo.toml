@@ -1,0 +1,12 @@
+[package]
+name = "ritder-launcher"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Native process and staged-update supervisor for Ritder on TrimUI Brick Pro"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

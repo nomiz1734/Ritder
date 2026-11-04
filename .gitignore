@@ -1,6 +1,7 @@
 /dist
 /vendor/cache
 /vendor/wsl
+/rust/**/target/
 __pycache__/
 *.pyc
 

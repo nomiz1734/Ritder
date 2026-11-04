@@ -2,7 +2,7 @@
 
 App đọc sách cho **TrimUI Brick Pro**, dựa trên [KOReader](https://github.com/koreader/koreader). Ưu tiên đọc mượt PDF và truyện tranh CBZ/CBR trên màn hình LCD 1024×768, điều khiển hoàn toàn bằng nút bấm, tự cập nhật qua GitHub Releases.
 
-Phiên bản hiện tại: **0.1.5** (dựa trên KOReader v2026.07.1).
+Phiên bản hiện tại: **0.1.6** (dựa trên KOReader v2026.07.1).
 
 > Đã chạy trên Brick Pro thật (firmware gốc): màn hình, nút bấm, pin, tiếng Việt. Giao diện được kiểm tra thêm bằng giả lập trên PC: [docs/CHUP-MAN-HINH-gia-lap.md](docs/CHUP-MAN-HINH-gia-lap.md).
 >
@@ -115,6 +115,19 @@ Cần Python 3.10+ (Windows, PowerShell):
 .\build.ps1            # dist\Ritder, dist\Ritder-stock.zip, dist\update\{update.json, ritder-update.tar.gz}
 .\build.ps1 -Publish   # và tạo GitHub Release
 ```
+
+### Native supervisor (Rust)
+
+Ritder giữ KOReader làm engine đọc sách, còn supervisor native Rust quản lý vòng đời tiến trình
+và giao dịch OTA trên Brick Pro. Cài Rust stable rồi chạy:
+
+```powershell
+.\tools\build_native.ps1
+.\build.ps1
+```
+
+Supervisor được biên dịch cho `aarch64-unknown-linux-musl` bằng `rust-lld`, không phụ thuộc glibc
+của firmware. Nếu chưa build binary Rust, gói vẫn dùng launcher shell tương thích cũ.
 
 Lần đầu `tools/build.py` tải khoảng 32 MB (KOReader + 3 gói Debian) vào `vendor/cache/`.
 

@@ -36,6 +36,7 @@ EXECUTABLE = {
     "launch.sh",
     "install.sh",
     "logging.sh",
+    "ritder-launcher",
     "luajit",
     "reader.lua",
     "sdcv",
@@ -304,6 +305,15 @@ def main() -> None:
     apply_patches()
     write_build_info(version, update_url, pins["koreader"]["version"])
     copy_tree(os.path.join(ROOT, "package", "stock"), DIST)
+    # The native supervisor is built separately for the device target. Keep the
+    # existing Lua/shell fallback when the cross target is not installed yet.
+    native = os.path.join(ROOT, "rust", "ritder-launcher", "target", "aarch64-unknown-linux-musl", "release", "ritder-launcher")
+    if os.path.isfile(native):
+        shutil.copy2(native, os.path.join(DIST, "ritder-launcher"))
+        os.chmod(os.path.join(DIST, "ritder-launcher"), 0o755)
+        print("  native supervisor: included")
+    else:
+        print("  native supervisor: not built (using shell fallback)")
     to_lf(os.path.join(DIST, "launch.sh"))
     to_lf(os.path.join(DIST, "install.sh"))
     to_lf(os.path.join(DIST, "logging.sh"))

@@ -49,16 +49,16 @@ if [ -z "${RITDER_RESTARTED:-}" ]; then
     fi
 fi
 
-# An install that was cut short (power loss, crash) leaves a half-updated app: undo it.
-if [ -f "$UPD/installing" ]; then
-    ritder_log "update $(cat "$UPD/installing") was interrupted, restoring the previous files"
-    ritder_restore_backup
-fi
-
-# The app unpacked an update and asked for a restart: swap the files in now, while
-# nothing is running out of them.
-if [ -f "$UPD/ready" ] && [ -d "$UPD/staging" ]; then
-    ritder_install_staged
+# The Rust supervisor owns staged update installation when it is present. The shell path
+# remains for older/manual packages so an interrupted update can still be recovered.
+if [ ! -x "$progdir/ritder-launcher" ]; then
+    if [ -f "$UPD/installing" ]; then
+        ritder_log "update $(cat "$UPD/installing") was interrupted, restoring the previous files"
+        ritder_restore_backup
+    fi
+    if [ -f "$UPD/ready" ] && [ -d "$UPD/staging" ]; then
+        ritder_install_staged
+    fi
 fi
 
 chmod +x "$LOADER" "$progdir/luajit" "$progdir/sdcv" "$progdir/sdcv.bin" 2>/dev/null
@@ -67,35 +67,35 @@ if ! "$LOADER" --version > /dev/null 2>&1; then
     exit 1
 fi
 
-while true; do
+if [ -x "$progdir/ritder-launcher" ]; then
+    # Native supervision avoids repeated shell parsing and keeps update transactions in one
+    # process. KOReader's stdout/stderr still land in the same diagnostic file.
     ritder_rotate_logs
     ritder_session_start
-    "$LOADER" --library-path "$LIBPATH" "$progdir/luajit" reader.lua > "$USERDATA/crash.log" 2>&1
+    "$progdir/ritder-launcher" \
+        "$progdir" "$USERDATA" "$LOADER" "$LIBPATH" "$progdir/luajit" "$progdir/reader.lua" \
+        > "$USERDATA/crash.log" 2>&1
     code=$?
     ritder_session_end "$code"
-    if [ "$code" -eq 42 ]; then
-        # An update was installed: start over with the new launcher and binaries.
-        export RITDER_RESTARTED=1
-        exec /bin/sh "$progdir/launch.sh"
-    fi
-    if [ "$code" -eq 85 ]; then
-        continue
-    fi
-    if [ "$code" -ne 0 ] && [ -f "$UPD/pending" ] && [ -d "$UPD/backup" ]; then
-        # The new version failed before confirming it works: go back to the previous one.
-        version=$(cat "$UPD/pending")
-        ritder_log "update $version failed (exit $code), rolled back"
-        tail -n 40 "$USERDATA/crash.log" >> "$USERDATA/update.log" 2>/dev/null
-        ritder_restore_backup
-        echo "$version" > "$UPD/rolled_back"
-        export RITDER_RESTARTED=1
-        exec /bin/sh "$progdir/launch.sh"
-    fi
-    if [ "$code" -ne 0 ]; then
-        cp -f "$USERDATA/crash.log" "$USERDATA/launch.log" 2>/dev/null
-    fi
-    break
-done
+else
+    while true; do
+        ritder_rotate_logs
+        ritder_session_start
+        "$LOADER" --library-path "$LIBPATH" "$progdir/luajit" reader.lua > "$USERDATA/crash.log" 2>&1
+        code=$?
+        ritder_session_end "$code"
+        if [ "$code" -eq 42 ] || [ "$code" -eq 85 ]; then continue; fi
+        if [ "$code" -ne 0 ] && [ -f "$UPD/pending" ] && [ -d "$UPD/backup" ]; then
+            version=$(cat "$UPD/pending")
+            ritder_log "update $version failed (exit $code), rolled back"
+            tail -n 40 "$USERDATA/crash.log" >> "$USERDATA/update.log" 2>/dev/null
+            ritder_restore_backup
+            echo "$version" > "$UPD/rolled_back"
+        fi
+        if [ "$code" -ne 0 ]; then cp -f "$USERDATA/crash.log" "$USERDATA/launch.log" 2>/dev/null; fi
+        break
+    done
+fi
 
 if [ -n "${RITDER_OLD_GOV:-}" ]; then
     echo "$RITDER_OLD_GOV" > "$CPU/scaling_governor" 2>/dev/null
