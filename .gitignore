@@ -7,3 +7,5 @@ __pycache__/
 
 # Ghi chú làm việc, không thuộc mã nguồn.
 /notes/
+
+/ritder-rs/target/
