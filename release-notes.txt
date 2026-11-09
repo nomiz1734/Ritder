@@ -1,7 +1,4 @@
-• Ban đêm đọc truyện tranh: thêm mục START → Cài đặt → "Giữ nguyên màu trang", ngay dưới Chế độ ban đêm
-• Bật lên thì trang truyện đen trắng giữ nền trắng nét đen, chỉ menu bị đảo màu
-• Áp dụng ngay cho sách đang mở và cho mọi sách mở sau đó, không phải chỉnh lại từng tập truyện
-• Trong menu, bật/tắt một ô chọn không còn làm con trỏ nhảy về đầu danh sách
-• Native Rust supervisor for app launch, restart and OTA file transactions on Brick Pro
-• OTA keeps the existing SHA-256 manifest, staged install, backup and rollback protocol
-• Shell launcher remains as a compatibility fallback for older/manual packages
+• Ritder 0.2.0: migration toàn bộ code Ritder tự viết sang Rust — ritder-core (logic lõi), ritder-tools (công cụ build/đóng gói) và ritder-launcher
+• Kèm theo gói cập nhật là launcher native Rust: quản lý vòng đời app (mở, thoát, khởi động lại) và toàn bộ giao dịch OTA trên Brick Pro
+• Giao thức cập nhật giữ nguyên: staged install, backup và rollback khi bản mới lỗi, manifest SHA-256 kiểm tra gói tải về
+• Shell launcher vẫn đi kèm làm fallback tương thích cho gói cài tay/bản cũ

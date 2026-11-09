@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/ritder-core", "crates/ritder-launcher", "crates/ritder-tools"]
+
+[workspace.package]
+version = "0.1.6"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+
+[profile.release]
+opt-level = 3
